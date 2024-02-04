@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.27.0"
+nix = {version = "0.27.1", features = ["signal"]}
 num-format = "0.4.4"
-ratatui = "0.25.0"
+ratatui = "0.26.0"
 signal-hook = "0.3.17"
 sysinfo = "0.30.5"
 

@@ -16,17 +16,16 @@ pub(crate) trait Node {
 
     fn node_header() -> String;
 
-    fn format_header(width: usize) -> String {
-        let mut result = String::new();
-        result += &Self::table_header();
-        result += " ┃ ";
-        result += &Self::node_header();
-        result += "\n";
-        result += &"━".repeat(Self::table_header().len() + 1);
-        result += "╋";
-        result += &"━".repeat(width.saturating_sub(Self::table_header().len() + 2));
-        result += "\n";
-        result
+    fn format_header(width: usize) -> Vec<String> {
+        let mut first = String::new();
+        first += &Self::table_header();
+        first += " ┃ ";
+        first += &Self::node_header();
+        let mut second = String::new();
+        second += &"━".repeat(Self::table_header().len() + 1);
+        second += "╋";
+        second += &"━".repeat(width.saturating_sub(Self::table_header().len() + 2));
+        vec![first, second]
     }
 
     fn parent(&self) -> Option<Self::Id>;
@@ -135,13 +134,12 @@ where
         any_child_included
     }
 
-    pub(crate) fn format<F>(&self, filter: F, width: u16) -> String
+    pub(crate) fn format_processes<F>(&self, filter: F) -> Vec<(Node::Id, String)>
     where
         F: Fn(&Node) -> bool,
     {
         let included = self.filter(filter);
-        let mut acc = String::new();
-        acc += &Node::format_header(width as usize);
+        let mut acc = Vec::new();
         self.format_helper(&included, true, &mut Vec::new(), &mut acc);
         acc
     }
@@ -151,7 +149,7 @@ where
         included: &HashSet<Node::Id>,
         is_root: bool,
         prefixes: &mut Vec<&str>,
-        acc: &mut String,
+        acc: &mut Vec<(Node::Id, String)>,
     ) {
         let children: Vec<&Tree<Node>> = self
             .0
@@ -163,16 +161,18 @@ where
             if !included.contains(&child.node.id()) {
                 continue;
             }
-            *acc += &format!("{} ┃ ", child.node.table_data());
+            let mut line = String::new();
+            line += &format!("{} ┃ ", child.node.table_data());
             for prefix in prefixes.iter() {
-                *acc += prefix;
+                line += prefix;
             }
             if !is_root {
-                *acc += if is_last { "└─" } else { "├─" };
+                line += if is_last { "└─" } else { "├─" };
                 let has_children = !child.children.0.is_empty();
-                *acc += if has_children { "┬ " } else { "─ " };
+                line += if has_children { "┬ " } else { "─ " };
             }
-            *acc += &format!("{}\n", child.node);
+            line += &format!("{}", child.node);
+            acc.push((child.node.id(), line));
             if !(is_root) {
                 prefixes.push(if is_last { "  " } else { "│ " });
             }
@@ -187,6 +187,26 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
     use unindent::Unindent;
+
+    impl<Node> Forest<Node>
+    where
+        Node: Display,
+        Node: crate::tree::Node,
+        Node::Id: Eq + Copy + Hash,
+    {
+        fn test_format<F>(&self, filter: F, width: u16) -> String
+        where
+            F: Fn(&Node) -> bool,
+        {
+            let header = Node::format_header(width.into());
+            let table: Vec<String> = self
+                .format_processes(filter)
+                .into_iter()
+                .map(|x| x.1)
+                .collect();
+            format!("{}\n{}\n", header.join("\n"), table.join("\n"))
+        }
+    }
 
     #[derive(Debug)]
     struct TestNode {
@@ -250,7 +270,7 @@ mod test {
     fn a_single_node_tree() {
         let tree = Forest::new_forest(vec![TestNode::new(1, None)].into_iter());
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -265,7 +285,7 @@ mod test {
         let tree =
             Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, Some(1))].into_iter());
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -288,7 +308,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -312,7 +332,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -336,7 +356,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -354,7 +374,7 @@ mod test {
         let tree =
             Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter());
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -370,7 +390,7 @@ mod test {
         let tree =
             Forest::new_forest(vec![TestNode::new(2, None), TestNode::new(1, None)].into_iter());
         assert_eq!(
-            tree.format(|_| true, 25),
+            tree.test_format(|_| true, 25),
             "
                 # ┃ number
                 ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -391,7 +411,7 @@ mod test {
                 vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -412,7 +432,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 1, 25),
+                tree.test_format(|node| node.id == 1, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -434,7 +454,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -456,7 +476,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 3, 25),
+                tree.test_format(|node| node.id == 3, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -480,7 +500,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -504,7 +524,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -584,7 +604,7 @@ mod test {
                 vec![TestNode::new(1, None, 2), TestNode::new(2, Some(1), 3)].into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -606,7 +626,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|node| node.id == 2, 25),
+                tree.test_format(|node| node.id == 2, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -633,7 +653,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.format(|_| true, 25),
+                tree.test_format(|_| true, 25),
                 "
                     # ┃ number
                     ━━╋━━━━━━━━━━━━━━━━━━━━━━
@@ -690,7 +710,7 @@ mod test {
             }
 
             assert_eq!(
-                N::format_header(25),
+                format!("{}\n", N::format_header(25).join("\n")),
                 "
                     a b c ┃ node header
                     ━━━━━━╋━━━━━━━━━━━━━━━━━━
