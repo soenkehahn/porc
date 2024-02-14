@@ -4,7 +4,7 @@ use crate::{
     process::Process,
     tree::Node,
     tui_app::{self, UpdateResult},
-    R,
+    ValidatedRegexString, R,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use nix::sys::signal::kill;
@@ -15,12 +15,14 @@ use ratatui::{
     text::Line,
     widgets::{List, ListState, Paragraph, StatefulWidget, Widget},
 };
+use regex::{Regex, RegexBuilder};
 
 #[derive(Debug)]
 pub(crate) struct PorcApp {
     process_watcher: ProcessWatcher,
     processes: Vec<(sysinfo::Pid, String)>,
     pattern: String,
+    regex: Regex,
     list_state: ListState,
     ui_mode: UiMode,
     sort_column: SortBy,
@@ -34,19 +36,38 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<String>) -> PorcApp {
-        PorcApp {
+    pub(crate) fn new(
+        process_watcher: ProcessWatcher,
+        regex: Option<ValidatedRegexString>,
+    ) -> R<PorcApp> {
+        let mut app = PorcApp {
             process_watcher,
             processes: Vec::new(),
-            pattern: pattern.unwrap_or("".to_string()),
+            pattern: "".to_string(),
+            regex: Regex::new("")?,
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
             sort_column: SortBy::default(),
-        }
+        };
+        app.modify_regex(|r| *r = regex.unwrap_or_default().0);
+        Ok(app)
     }
 
     pub(crate) fn run(self) -> R<()> {
         tui_app::run_ui(self)
+    }
+
+    fn modify_regex<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut String),
+    {
+        f(&mut self.pattern);
+        if let Ok(regex) = RegexBuilder::new(&self.pattern)
+            .case_insensitive(true)
+            .build()
+        {
+            self.regex = regex;
+        };
     }
 
     fn update_processes(&mut self) {
@@ -57,7 +78,7 @@ impl PorcApp {
                 self.ui_mode = UiMode::Normal;
             }
         }
-        self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
+        self.processes = tree.format_processes(|p| self.regex.is_match(&p.name));
     }
 }
 
@@ -111,10 +132,12 @@ impl tui_app::TuiApp for PorcApp {
                 self.ui_mode = UiMode::Normal;
             }
             (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Char(key)) if key.is_ascii() => {
-                self.pattern.push(key);
+                self.modify_regex(|regex| regex.push(key));
             }
             (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Backspace) => {
-                self.pattern.pop();
+                self.modify_regex(|regex| {
+                    regex.pop();
+                });
             }
             (KeyModifiers::NONE, UiMode::ProcessSelected(pid), KeyCode::Char('t')) => {
                 kill(
@@ -167,7 +190,7 @@ impl tui_app::TuiApp for PorcApp {
                         "/: filter processes".to_string(),
                     ];
                     if !self.pattern.is_empty() {
-                        commands.push(format!("search pattern: {}", self.pattern));
+                        commands.push(format!("search regex: {}", self.pattern));
                     }
                     commands.join(" | ")
                 }
@@ -176,7 +199,7 @@ impl tui_app::TuiApp for PorcApp {
                     "↑↓ : scroll",
                     "ENTER: select process",
                     "ESC: exit search mode",
-                    &format!("type search pattern: {}▌", self.pattern),
+                    &format!("type search regex: {}▌", self.pattern),
                 ]
                 .join(" | "),
                 UiMode::ProcessSelected(_pid) => {
@@ -189,7 +212,7 @@ impl tui_app::TuiApp for PorcApp {
                         "ENTER: select other".to_string(),
                     ];
                     if !self.pattern.is_empty() {
-                        commands.push(format!("search pattern: {}", self.pattern));
+                        commands.push(format!("search regex: {}", self.regex));
                     }
                     commands.join(" | ")
                 }
@@ -281,7 +304,7 @@ mod test {
     }
 
     fn test_app(processes: Vec<Process>) -> PorcApp {
-        let mut app = PorcApp::new(ProcessWatcher::fake(processes), None);
+        let mut app = PorcApp::new(ProcessWatcher::fake(processes), None).unwrap();
         app.tick();
         app
     }
