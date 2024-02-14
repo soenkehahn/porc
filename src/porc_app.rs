@@ -42,6 +42,17 @@ impl PorcApp {
         };
         tui_app::run_ui(app)
     }
+
+    fn update_processes(&mut self) {
+        let processes = self.system.processes();
+        if let UiMode::ProcessSelected(selected) = self.ui_mode {
+            if !processes.keys().any(|pid| pid == &selected) {
+                self.ui_mode = UiMode::Normal;
+            }
+        }
+        let tree = Process::new_from_sysinfo(processes.values());
+        self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
+    }
 }
 
 impl tui_app::TuiApp for PorcApp {
@@ -108,8 +119,7 @@ impl tui_app::TuiApp for PorcApp {
             }
             _ => {}
         }
-        let tree = Process::new_from_sysinfo(self.system.processes().values());
-        self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
+        self.update_processes();
         Ok(UpdateResult::Continue)
     }
 
@@ -213,14 +223,7 @@ impl tui_app::TuiApp for PorcApp {
                 .with_cpu()
                 .with_cmd(UpdateKind::OnlyIfNotSet),
         );
-        let processes = &self.system.processes();
-        if let UiMode::ProcessSelected(selected) = self.ui_mode {
-            if !processes.keys().any(|pid| pid == &selected) {
-                self.ui_mode = UiMode::Normal;
-            }
-        }
-        let tree = Process::new_from_sysinfo(processes.values());
-        self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
+        self.update_processes();
     }
 }
 
