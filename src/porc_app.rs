@@ -15,12 +15,8 @@ use ratatui::{
 };
 use sysinfo::{ProcessRefreshKind, System, UpdateKind};
 
-pub(crate) fn run_ui(system: System) -> R<()> {
-    tui_app::run_ui(PorcApp::new(system))
-}
-
 #[derive(Debug)]
-struct PorcApp {
+pub(crate) struct PorcApp {
     system: System,
     processes: Vec<(sysinfo::Pid, String)>,
     pattern: String,
@@ -29,14 +25,15 @@ struct PorcApp {
 }
 
 impl PorcApp {
-    fn new(system: System) -> Self {
-        PorcApp {
+    pub(crate) fn run(system: System, pattern: Option<String>) -> R<()> {
+        let app = PorcApp {
             system,
             processes: Vec::new(),
-            pattern: "".to_string(),
+            pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             selected_pid: None,
-        }
+        };
+        tui_app::run_ui(app)
     }
 }
 
