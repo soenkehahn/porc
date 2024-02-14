@@ -52,56 +52,56 @@ impl tui_app::TuiApp for PorcApp {
             .map(|x| x.0)
             .collect::<Vec<&str>>();
         modifiers.sort();
-        match (modifiers.as_slice(), event.code, self.ui_mode) {
-            (["CONTROL"], KeyCode::Char('c'), _) => {
+        match (modifiers.as_slice(), self.ui_mode, event.code) {
+            (["CONTROL"], _, KeyCode::Char('c')) => {
                 return Ok(UpdateResult::Exit);
             }
-            ([], KeyCode::Up, _) => {
+            ([], _, KeyCode::Up) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_sub(1),
                 ));
             }
-            ([], KeyCode::PageUp, _) => {
+            ([], _, KeyCode::PageUp) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_sub(20),
                 ));
             }
-            ([], KeyCode::Down, _) => {
+            ([], _, KeyCode::Down) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_add(1),
                 ));
             }
-            ([], KeyCode::PageDown, _) => {
+            ([], _, KeyCode::PageDown) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_add(20),
                 ));
             }
-            ([], KeyCode::Enter, _) => {
+            ([], _, KeyCode::Enter) => {
                 if let Some(selected) = self.list_state.selected() {
                     if let Some(process) = self.processes.get(selected) {
                         self.ui_mode = UiMode::ProcessSelected(process.0);
                     }
                 }
             }
-            ([], KeyCode::Char('/'), _) => {
+            ([], _, KeyCode::Char('/')) => {
                 self.ui_mode = UiMode::EditingPattern;
             }
-            ([], KeyCode::Char(key), UiMode::EditingPattern) if key.is_ascii() => {
-                self.pattern.push(key);
-            }
-            ([], KeyCode::Backspace, UiMode::EditingPattern) => {
-                self.pattern.pop();
-            }
-            ([], KeyCode::Esc, UiMode::EditingPattern | UiMode::ProcessSelected(_)) => {
+            ([], UiMode::EditingPattern | UiMode::ProcessSelected(_), KeyCode::Esc) => {
                 self.ui_mode = UiMode::Normal;
             }
-            ([], KeyCode::Char('t'), UiMode::ProcessSelected(pid)) => {
+            ([], UiMode::EditingPattern, KeyCode::Char(key)) if key.is_ascii() => {
+                self.pattern.push(key);
+            }
+            ([], UiMode::EditingPattern, KeyCode::Backspace) => {
+                self.pattern.pop();
+            }
+            ([], UiMode::ProcessSelected(pid), KeyCode::Char('t')) => {
                 kill(
                     nix::unistd::Pid::from_raw(pid.as_u32().try_into()?),
                     nix::sys::signal::Signal::SIGTERM,
                 )?;
             }
-            ([], KeyCode::Char('k'), UiMode::ProcessSelected(pid)) => {
+            ([], UiMode::ProcessSelected(pid), KeyCode::Char('k')) => {
                 kill(
                     nix::unistd::Pid::from_raw(pid.as_u32().try_into()?),
                     nix::sys::signal::Signal::SIGKILL,
