@@ -4,7 +4,7 @@ use crate::{
     tui_app::{self, UpdateResult},
     R,
 };
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use nix::sys::signal::kill;
 use ratatui::{
     buffer::Buffer,
@@ -46,62 +46,60 @@ impl PorcApp {
 
 impl tui_app::TuiApp for PorcApp {
     fn update(&mut self, event: KeyEvent) -> R<UpdateResult> {
-        let mut modifiers = event
-            .modifiers
-            .iter_names()
-            .map(|x| x.0)
-            .collect::<Vec<&str>>();
-        modifiers.sort();
-        match (modifiers.as_slice(), self.ui_mode, event.code) {
-            (["CONTROL"], _, KeyCode::Char('c')) => {
+        match (event.modifiers, self.ui_mode, event.code) {
+            (KeyModifiers::CONTROL, _, KeyCode::Char('c')) => {
                 return Ok(UpdateResult::Exit);
             }
-            ([], _, KeyCode::Up) => {
+            (KeyModifiers::NONE, _, KeyCode::Up) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_sub(1),
                 ));
             }
-            ([], _, KeyCode::PageUp) => {
+            (KeyModifiers::NONE, _, KeyCode::PageUp) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_sub(20),
                 ));
             }
-            ([], _, KeyCode::Down) => {
+            (KeyModifiers::NONE, _, KeyCode::Down) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_add(1),
                 ));
             }
-            ([], _, KeyCode::PageDown) => {
+            (KeyModifiers::NONE, _, KeyCode::PageDown) => {
                 self.list_state.select(Some(
                     self.list_state.selected().unwrap_or(0).saturating_add(20),
                 ));
             }
-            ([], _, KeyCode::Enter) => {
+            (KeyModifiers::NONE, _, KeyCode::Enter) => {
                 if let Some(selected) = self.list_state.selected() {
                     if let Some(process) = self.processes.get(selected) {
                         self.ui_mode = UiMode::ProcessSelected(process.0);
                     }
                 }
             }
-            ([], _, KeyCode::Char('/')) => {
+            (KeyModifiers::NONE, _, KeyCode::Char('/')) => {
                 self.ui_mode = UiMode::EditingPattern;
             }
-            ([], UiMode::EditingPattern | UiMode::ProcessSelected(_), KeyCode::Esc) => {
+            (
+                KeyModifiers::NONE,
+                UiMode::EditingPattern | UiMode::ProcessSelected(_),
+                KeyCode::Esc,
+            ) => {
                 self.ui_mode = UiMode::Normal;
             }
-            ([], UiMode::EditingPattern, KeyCode::Char(key)) if key.is_ascii() => {
+            (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Char(key)) if key.is_ascii() => {
                 self.pattern.push(key);
             }
-            ([], UiMode::EditingPattern, KeyCode::Backspace) => {
+            (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Backspace) => {
                 self.pattern.pop();
             }
-            ([], UiMode::ProcessSelected(pid), KeyCode::Char('t')) => {
+            (KeyModifiers::NONE, UiMode::ProcessSelected(pid), KeyCode::Char('t')) => {
                 kill(
                     nix::unistd::Pid::from_raw(pid.as_u32().try_into()?),
                     nix::sys::signal::Signal::SIGTERM,
                 )?;
             }
-            ([], UiMode::ProcessSelected(pid), KeyCode::Char('k')) => {
+            (KeyModifiers::NONE, UiMode::ProcessSelected(pid), KeyCode::Char('k')) => {
                 kill(
                     nix::unistd::Pid::from_raw(pid.as_u32().try_into()?),
                     nix::sys::signal::Signal::SIGKILL,
