@@ -25,6 +25,18 @@
       in
       {
         packages.default = rustPkgs.workspace.porc { };
+        apps.generateCargoNix = {
+          type = "app";
+          program =
+            pkgs.lib.getExe (pkgs.writeShellApplication
+              {
+                name = "generateCargoNix";
+                runtimeInputs = [ cargo2nix.packages.${system}.default ];
+                text = ''
+                  cargo2nix . --overwrite --locked
+                '';
+              });
+        };
       }
     );
 }
