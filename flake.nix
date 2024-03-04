@@ -25,6 +25,9 @@
       in
       {
         packages.default = rustPkgs.workspace.porc { };
+        devShells.default = pkgs.mkShell {
+          buildInputs = [ pkgs.rust-analyzer ];
+        };
         apps.generateCargoNix = {
           type = "app";
           program =
