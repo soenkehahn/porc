@@ -210,7 +210,7 @@ impl tui_app::TuiApp for PorcApp {
             ProcessRefreshKind::new()
                 .with_memory()
                 .with_cpu()
-                .with_exe(UpdateKind::OnlyIfNotSet),
+                .with_cmd(UpdateKind::OnlyIfNotSet),
         );
         let processes = &self.system.processes();
         if let UiMode::ProcessSelected(selected) = self.ui_mode {

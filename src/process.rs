@@ -3,6 +3,7 @@ use crate::tree::Node;
 use num_format::Locale;
 use num_format::ToFormattedString;
 use std::fmt;
+use std::path::Path;
 use sysinfo::Pid;
 use sysinfo::ThreadKind;
 
@@ -10,6 +11,7 @@ use sysinfo::ThreadKind;
 pub(crate) struct Process {
     pid: Pid,
     pub(crate) name: String,
+    arguments: Vec<String>,
     parent: Option<Pid>,
     cpu: f32,
     ram: u64,
@@ -17,7 +19,17 @@ pub(crate) struct Process {
 
 impl fmt::Display for Process {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
+        match self.arguments.first() {
+            Some(executable) => match Path::new(&executable).file_name() {
+                Some(file_name) => write!(f, "{}", file_name.to_string_lossy())?,
+                None => write!(f, "{}", executable)?,
+            },
+            None => write!(f, "{}", self.name)?,
+        }
+        for argument in self.arguments.iter().skip(1) {
+            write!(f, " {}", argument)?;
+        }
+        Ok(())
     }
 }
 
@@ -50,10 +62,11 @@ impl Node for Process {
     }
 
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other
-            .cpu
-            .partial_cmp(&self.cpu)
-            .unwrap_or(self.pid.cmp(&other.pid))
+        match other.cpu.partial_cmp(&self.cpu) {
+            Some(std::cmp::Ordering::Equal) => self.pid.cmp(&other.pid),
+            Some(ordering) => ordering,
+            None => self.pid.cmp(&other.pid),
+        }
     }
 
     fn accumulate_from(&mut self, other: &Self) {
@@ -73,6 +86,7 @@ impl Process {
                 },
                 None => process.name().to_string(),
             },
+            arguments: process.cmd().to_vec(),
             parent: process.parent(),
             cpu: process.cpu_usage(),
             ram: process.memory(),
