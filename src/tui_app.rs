@@ -49,15 +49,22 @@ pub(crate) fn run_ui<T: TuiApp>(app: T) -> R<()> {
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     std::panic::set_hook(Box::new(|panic_info| {
-        let _ = stdout().execute(LeaveAlternateScreen);
-        let _ = disable_raw_mode();
+        let _ = reset_terminal();
         eprintln!("panic: {}", panic_info);
     }));
-    if let Err(err) = main_loop(app, termination_signal_received) {
-        stdout().execute(LeaveAlternateScreen)?;
-        disable_raw_mode()?;
-        return Err(err);
+    match main_loop(app, termination_signal_received) {
+        Err(err) => {
+            let _ = reset_terminal();
+            Err(err)
+        }
+        Ok(()) => {
+            reset_terminal()?;
+            Ok(())
+        }
     }
+}
+
+fn reset_terminal() -> R<()> {
     stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
