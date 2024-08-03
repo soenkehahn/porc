@@ -47,7 +47,8 @@ impl PorcApp {
 impl tui_app::TuiApp for PorcApp {
     fn update(&mut self, event: KeyEvent) -> R<UpdateResult> {
         match (event.modifiers, self.ui_mode, event.code) {
-            (KeyModifiers::CONTROL, _, KeyCode::Char('c')) => {
+            (KeyModifiers::CONTROL, _, KeyCode::Char('c'))
+            | (KeyModifiers::NONE, UiMode::Normal, KeyCode::Char('q')) => {
                 return Ok(UpdateResult::Exit);
             }
             (KeyModifiers::NONE, _, KeyCode::Up) => {
