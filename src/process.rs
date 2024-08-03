@@ -40,17 +40,23 @@ impl Node for Process {
         self.pid
     }
 
-    fn table_header() -> String {
-        "     pid   cpu       ram".to_owned()
+    fn table_header() -> Vec<(usize, String)> {
+        vec![
+            (8, "pid".to_owned()),
+            (5, "cpu".to_owned()),
+            (9, "ram".to_owned()),
+        ]
     }
 
-    fn table_data(&self) -> String {
-        format!(
-            "{:>8} {:>4.0}% {:>7}MB",
-            self.pid.as_u32(),
-            self.cpu,
-            (self.ram / 2_u64.pow(20)).to_formatted_string(&Locale::en)
-        )
+    fn table_data(&self) -> Vec<String> {
+        vec![
+            format!("{:>8}", self.pid.as_u32(),),
+            format!("{:>4.0}%", self.cpu,),
+            format!(
+                "{:>7}MB",
+                (self.ram / 2_u64.pow(20)).to_formatted_string(&Locale::en)
+            ),
+        ]
     }
 
     fn node_header() -> String {

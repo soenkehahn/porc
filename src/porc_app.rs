@@ -32,15 +32,18 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn run(system: System, pattern: Option<String>) -> R<()> {
-        let app = PorcApp {
+    pub(crate) fn new(system: System, pattern: Option<String>) -> PorcApp {
+        PorcApp {
             system,
             processes: Vec::new(),
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
-        };
-        tui_app::run_ui(app)
+        }
+    }
+
+    pub(crate) fn run(system: System, pattern: Option<String>) -> R<()> {
+        tui_app::run_ui(PorcApp::new(system, pattern))
     }
 }
 
@@ -275,5 +278,34 @@ mod test {
         let mut list_state = ListState::default().with_selected(Some(0)).with_offset(25);
         normalize_list_state(&mut list_state, &vec![(); 30], &RECT);
         assert_eq!(list_state.offset(), 10);
+    }
+
+    mod update {
+        use crate::porc_app::PorcApp;
+        use crate::process::Process;
+        use crate::tree::Node;
+        use crate::tui_app::TuiApp;
+        use pretty_assertions::assert_eq;
+        use std::thread;
+        use std::time::Duration;
+        use sysinfo::System;
+
+        #[test]
+        fn header_formatting() {
+            assert_eq!(
+                Process::format_header(80)[0],
+                "     pid   cpu       ram ┃ executable".to_owned()
+            );
+        }
+
+        #[test]
+        fn sorting_by_cpu_usage() {
+            let mut app = PorcApp::new(System::new(), None);
+            app.tick();
+            thread::sleep(Duration::from_millis(200));
+            app.tick();
+            dbg!(app.processes.iter().take(10).map(|x| x).collect::<Vec<_>>());
+            todo!()
+        }
     }
 }

@@ -10,21 +10,33 @@ pub(crate) trait Node {
 
     fn id(&self) -> Self::Id;
 
-    fn table_header() -> String;
+    fn table_header() -> Vec<(usize, String)>;
 
-    fn table_data(&self) -> String;
+    fn table_data(&self) -> Vec<String>;
 
     fn node_header() -> String;
 
     fn format_header(width: usize) -> Vec<String> {
+        fn add_padding(width: usize, text: String) -> String {
+            if text.len() < width {
+                format!("{}{}", " ".repeat(width - text.len()), text)
+            } else {
+                text
+            }
+        }
         let mut first = String::new();
-        first += &Self::table_header();
+        let header = &Self::table_header()
+            .into_iter()
+            .map(|(width, value)| add_padding(width, value))
+            .collect::<Vec<_>>()
+            .join(" ");
+        first += header;
         first += " ┃ ";
         first += &Self::node_header();
         let mut second = String::new();
-        second += &"━".repeat(Self::table_header().len() + 1);
+        second += &"━".repeat(header.len() + 1);
         second += "╋";
-        second += &"━".repeat(width.saturating_sub(Self::table_header().len() + 2));
+        second += &"━".repeat(width.saturating_sub(header.len() + 2));
         vec![first, second]
     }
 
@@ -162,7 +174,7 @@ where
                 continue;
             }
             let mut line = String::new();
-            line += &format!("{} ┃ ", child.node.table_data());
+            line += &format!("{} ┃ ", child.node.table_data().join(" "));
             for prefix in prefixes.iter() {
                 line += prefix;
             }
@@ -237,12 +249,12 @@ mod test {
             self.id
         }
 
-        fn table_header() -> String {
-            "#".to_owned()
+        fn table_header() -> Vec<(usize, String)> {
+            vec![(1, "#".to_owned())]
         }
 
-        fn table_data(&self) -> String {
-            self.id.to_string()
+        fn table_data(&self) -> Vec<String> {
+            vec![self.id.to_string()]
         }
 
         fn node_header() -> String {
@@ -573,12 +585,12 @@ mod test {
                 self.id
             }
 
-            fn table_header() -> String {
-                "#".to_owned()
+            fn table_header() -> Vec<(usize, String)> {
+                vec![(1, "#".to_owned())]
             }
 
-            fn table_data(&self) -> String {
-                self.id.to_string()
+            fn table_data(&self) -> Vec<String> {
+                vec![self.id.to_string()]
             }
 
             fn node_header() -> String {
@@ -684,11 +696,15 @@ mod test {
                     todo!()
                 }
 
-                fn table_header() -> String {
-                    "a b c".to_owned()
+                fn table_header() -> Vec<(usize, String)> {
+                    vec![
+                        (1, "a".to_owned()),
+                        (1, "b".to_owned()),
+                        (1, "c".to_owned()),
+                    ]
                 }
 
-                fn table_data(&self) -> String {
+                fn table_data(&self) -> Vec<String> {
                     todo!()
                 }
 
