@@ -23,7 +23,7 @@
           test = pkgs.rustBuilder.runTests rustPkgs.workspace.porc { };
         };
         devShells.default = pkgs.mkShell {
-          buildInputs = [ pkgs.rust-analyzer ];
+          buildInputs = [ pkgs.rust-analyzer pkgs.cargo-insta ];
         };
         apps.generateCargoNix = {
           type = "app";

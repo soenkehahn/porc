@@ -235,7 +235,9 @@ fn normalize_list_state<T>(list_state: &mut ListState, list: &Vec<T>, rect: &Rec
 
 #[cfg(test)]
 mod test {
-    use crate::porc_app::normalize_list_state;
+    use super::*;
+    use crate::tui_app::TuiApp;
+    use insta::assert_snapshot;
     use ratatui::layout::Rect;
     use ratatui::widgets::ListState;
 
@@ -273,5 +275,26 @@ mod test {
         let mut list_state = ListState::default().with_selected(Some(0)).with_offset(25);
         normalize_list_state(&mut list_state, &vec![(); 30], &RECT);
         assert_eq!(list_state.offset(), 10);
+    }
+
+    fn test_format(processes: Vec<Process>) -> String {
+        let mut app = PorcApp::new(ProcessWatcher::test_watcher(processes), None);
+        app.tick();
+        app.processes
+            .iter()
+            .map(|tuple| tuple.1.clone())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn processes_get_sorted_by_cpu_usage() {
+        let processes = vec![
+            Process::test_process(1, 3.0),
+            Process::test_process(2, 4.0),
+            Process::test_process(3, 2.0),
+            Process::test_process(4, 1.0),
+        ];
+        assert_snapshot!(test_format(processes));
     }
 }

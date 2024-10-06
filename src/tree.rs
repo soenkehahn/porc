@@ -233,30 +233,20 @@ mod test {
 
     #[derive(Debug)]
     struct TestNode {
-        id: u8,
-        parent: Option<u8>,
+        id: usize,
+        parent: Option<usize>,
     }
 
     impl Display for TestNode {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                "{}",
-                match self.id {
-                    1 => "one",
-                    2 => "two",
-                    3 => "three",
-                    4 => "four",
-                    n => panic!("TestNode out of range: {}", n),
-                }
-            )
+            write!(f, "{}", crate::utils::test::render_number(self.id))
         }
     }
 
     impl Node for TestNode {
-        type Id = u8;
+        type Id = usize;
 
-        fn id(&self) -> u8 {
+        fn id(&self) -> usize {
             self.id
         }
 
@@ -272,7 +262,7 @@ mod test {
             "number".to_string()
         }
 
-        fn parent(&self) -> Option<u8> {
+        fn parent(&self) -> Option<usize> {
             self.parent
         }
 
@@ -284,7 +274,7 @@ mod test {
     }
 
     impl TestNode {
-        fn new(id: u8, parent: Option<u8>) -> TestNode {
+        fn new(id: usize, parent: Option<usize>) -> TestNode {
             TestNode { id, parent }
         }
     }
@@ -760,7 +750,7 @@ mod test {
             );
             eprintln!("{}", tree.test_format(|_| true, 25));
             assert_eq!(
-                tree.iter().map(Node::id).collect::<Vec<u8>>(),
+                tree.iter().map(Node::id).collect::<Vec<usize>>(),
                 vec![1, 2, 3, 4]
             );
         }
