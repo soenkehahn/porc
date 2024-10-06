@@ -8,6 +8,7 @@ mod porc_app;
 mod process;
 mod tree;
 mod tui_app;
+mod utils;
 
 type R<A> = Result<A, Box<dyn Error>>;
 

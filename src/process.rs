@@ -9,7 +9,7 @@ use sysinfo::ProcessRefreshKind;
 use sysinfo::ThreadKind;
 use sysinfo::UpdateKind;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Process {
     pid: Pid,
     pub(crate) name: String,
@@ -95,14 +95,20 @@ impl Process {
         }
     }
 
-    pub(crate) fn new_process_forest(processes: &ProcessWatcher) -> Forest<Self> {
-        Forest::new_forest(match processes {
-            ProcessWatcher(ProcessWatcherInner::Production { system: processes }) => processes
-                .processes()
-                .values()
-                .filter(|process| process.thread_kind() != Some(ThreadKind::Userland))
-                .map(Process::from_sysinfo_process),
-        })
+    pub(crate) fn new_process_forest(processes: &ProcessWatcher) -> Forest<Process> {
+        match processes {
+            ProcessWatcher(ProcessWatcherInner::Production { system }) => Forest::new_forest(
+                system
+                    .processes()
+                    .values()
+                    .filter(|process| process.thread_kind() != Some(ThreadKind::Userland))
+                    .map(Process::from_sysinfo_process),
+            ),
+            #[cfg(test)]
+            ProcessWatcher(ProcessWatcherInner::TestWatcher { processes }) => {
+                Forest::new_forest(processes.iter().cloned())
+            }
+        }
     }
 }
 
@@ -111,7 +117,13 @@ pub(crate) struct ProcessWatcher(ProcessWatcherInner);
 
 #[derive(Debug)]
 enum ProcessWatcherInner {
-    Production { system: sysinfo::System },
+    Production {
+        system: sysinfo::System,
+    },
+    #[cfg(test)]
+    TestWatcher {
+        processes: Vec<Process>,
+    },
 }
 
 impl ProcessWatcher {
@@ -128,6 +140,32 @@ impl ProcessWatcher {
                         .with_cpu()
                         .with_cmd(UpdateKind::OnlyIfNotSet),
                 ),
+            #[cfg(test)]
+            ProcessWatcher(ProcessWatcherInner::TestWatcher { .. }) => {}
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    impl Process {
+        pub(crate) fn test_process(pid: usize, cpu: f32) -> Process {
+            Process {
+                pid: pid.into(),
+                name: crate::utils::test::render_number(pid).to_string(),
+                arguments: Vec::new(),
+                parent: None,
+                cpu,
+                ram: 0,
+            }
+        }
+    }
+
+    impl ProcessWatcher {
+        pub(crate) fn test_watcher(processes: Vec<Process>) -> ProcessWatcher {
+            ProcessWatcher(ProcessWatcherInner::TestWatcher { processes })
         }
     }
 }
