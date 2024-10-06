@@ -1,11 +1,13 @@
-use crate::tree::Forest;
+pub(crate) use crate::tree::Forest;
 use crate::tree::Node;
 use num_format::Locale;
 use num_format::ToFormattedString;
 use std::fmt;
 use std::path::Path;
 use sysinfo::Pid;
+use sysinfo::ProcessRefreshKind;
 use sysinfo::ThreadKind;
+use sysinfo::UpdateKind;
 
 #[derive(Debug)]
 pub(crate) struct Process {
@@ -93,13 +95,39 @@ impl Process {
         }
     }
 
-    pub(crate) fn new_from_sysinfo<'a>(
-        processes: impl Iterator<Item = &'a sysinfo::Process>,
-    ) -> Forest<Self> {
-        Forest::new_forest(
-            processes
+    pub(crate) fn new_process_forest(processes: &ProcessWatcher) -> Forest<Self> {
+        Forest::new_forest(match processes {
+            ProcessWatcher(ProcessWatcherInner::Production { system: processes }) => processes
+                .processes()
+                .values()
                 .filter(|process| process.thread_kind() != Some(ThreadKind::Userland))
                 .map(Process::from_sysinfo_process),
-        )
+        })
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ProcessWatcher(ProcessWatcherInner);
+
+#[derive(Debug)]
+enum ProcessWatcherInner {
+    Production { system: sysinfo::System },
+}
+
+impl ProcessWatcher {
+    pub(crate) fn new(system: sysinfo::System) -> ProcessWatcher {
+        ProcessWatcher(ProcessWatcherInner::Production { system })
+    }
+
+    pub(crate) fn refresh(&mut self) {
+        match self {
+            ProcessWatcher(ProcessWatcherInner::Production { system }) => system
+                .refresh_processes_specifics(
+                    ProcessRefreshKind::new()
+                        .with_memory()
+                        .with_cpu()
+                        .with_cmd(UpdateKind::OnlyIfNotSet),
+                ),
+        }
     }
 }

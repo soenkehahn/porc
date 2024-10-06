@@ -1,3 +1,4 @@
+use crate::process::ProcessWatcher;
 use crate::{
     process::Process,
     tree::Node,
@@ -13,11 +14,10 @@ use ratatui::{
     text::Line,
     widgets::{List, ListState, Paragraph, StatefulWidget, Widget},
 };
-use sysinfo::{ProcessRefreshKind, System, UpdateKind};
 
 #[derive(Debug)]
 pub(crate) struct PorcApp {
-    system: System,
+    process_watcher: ProcessWatcher,
     processes: Vec<(sysinfo::Pid, String)>,
     pattern: String,
     list_state: ListState,
@@ -32,9 +32,9 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn run(system: System, pattern: Option<String>) -> R<()> {
+    pub(crate) fn run(system: sysinfo::System, pattern: Option<String>) -> R<()> {
         let app = PorcApp {
-            system,
+            process_watcher: ProcessWatcher::new(system),
             processes: Vec::new(),
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
@@ -108,7 +108,7 @@ impl tui_app::TuiApp for PorcApp {
             }
             _ => {}
         }
-        let tree = Process::new_from_sysinfo(self.system.processes().values());
+        let tree = Process::new_process_forest(&self.process_watcher);
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
         Ok(UpdateResult::Continue)
     }
@@ -207,19 +207,13 @@ impl tui_app::TuiApp for PorcApp {
     }
 
     fn tick(&mut self) {
-        self.system.refresh_processes_specifics(
-            ProcessRefreshKind::new()
-                .with_memory()
-                .with_cpu()
-                .with_cmd(UpdateKind::OnlyIfNotSet),
-        );
-        let processes = &self.system.processes();
+        self.process_watcher.refresh();
+        let tree = Process::new_process_forest(&self.process_watcher);
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
-            if !processes.keys().any(|pid| pid == &selected) {
+            if !tree.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
             }
         }
-        let tree = Process::new_from_sysinfo(processes.values());
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
     }
 }
