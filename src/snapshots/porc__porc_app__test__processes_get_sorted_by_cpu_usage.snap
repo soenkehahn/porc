@@ -1,0 +1,8 @@
+---
+source: src/porc_app.rs
+expression: tree
+---
+       2    4%       0MB ┃ two
+       1    3%       0MB ┃ one
+       3    2%       0MB ┃ three
+       4    1%       0MB ┃ four

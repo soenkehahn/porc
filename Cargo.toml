@@ -13,5 +13,6 @@ signal-hook = "0.3.17"
 sysinfo = "0.30.5"
 
 [dev-dependencies]
+insta = "1.40.0"
 pretty_assertions = "1.4.0"
 unindent = "0.2.3"

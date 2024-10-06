@@ -1,3 +1,4 @@
+use crate::process::ProcessWatcher;
 use crate::{
     process::Process,
     tree::Node,
@@ -13,11 +14,10 @@ use ratatui::{
     text::Line,
     widgets::{List, ListState, Paragraph, StatefulWidget, Widget},
 };
-use sysinfo::{ProcessRefreshKind, System, UpdateKind};
 
 #[derive(Debug)]
 pub(crate) struct PorcApp {
-    system: System,
+    process_watcher: ProcessWatcher,
     processes: Vec<(sysinfo::Pid, String)>,
     pattern: String,
     list_state: ListState,
@@ -32,15 +32,18 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn run(system: System, pattern: Option<String>) -> R<()> {
-        let app = PorcApp {
-            system,
+    pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<String>) -> PorcApp {
+        PorcApp {
+            process_watcher,
             processes: Vec::new(),
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
-        };
-        tui_app::run_ui(app)
+        }
+    }
+
+    pub(crate) fn run(self) -> R<()> {
+        tui_app::run_ui(self)
     }
 }
 
@@ -108,7 +111,7 @@ impl tui_app::TuiApp for PorcApp {
             }
             _ => {}
         }
-        let tree = Process::new_from_sysinfo(self.system.processes().values());
+        let tree = Process::new_process_forest(&self.process_watcher);
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
         Ok(UpdateResult::Continue)
     }
@@ -207,19 +210,13 @@ impl tui_app::TuiApp for PorcApp {
     }
 
     fn tick(&mut self) {
-        self.system.refresh_processes_specifics(
-            ProcessRefreshKind::new()
-                .with_memory()
-                .with_cpu()
-                .with_cmd(UpdateKind::OnlyIfNotSet),
-        );
-        let processes = &self.system.processes();
+        self.process_watcher.refresh();
+        let tree = Process::new_process_forest(&self.process_watcher);
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
-            if !processes.keys().any(|pid| pid == &selected) {
+            if !tree.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
             }
         }
-        let tree = Process::new_from_sysinfo(processes.values());
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
     }
 }
@@ -238,7 +235,9 @@ fn normalize_list_state<T>(list_state: &mut ListState, list: &Vec<T>, rect: &Rec
 
 #[cfg(test)]
 mod test {
-    use crate::porc_app::normalize_list_state;
+    use super::*;
+    use crate::tui_app::TuiApp;
+    use insta::assert_snapshot;
     use ratatui::layout::Rect;
     use ratatui::widgets::ListState;
 
@@ -276,5 +275,26 @@ mod test {
         let mut list_state = ListState::default().with_selected(Some(0)).with_offset(25);
         normalize_list_state(&mut list_state, &vec![(); 30], &RECT);
         assert_eq!(list_state.offset(), 10);
+    }
+
+    fn test_format(processes: Vec<Process>) -> String {
+        let mut app = PorcApp::new(ProcessWatcher::test_watcher(processes), None);
+        app.tick();
+        app.processes
+            .iter()
+            .map(|tuple| tuple.1.clone())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn processes_get_sorted_by_cpu_usage() {
+        let processes = vec![
+            Process::test_process(1, 3.0),
+            Process::test_process(2, 4.0),
+            Process::test_process(3, 2.0),
+            Process::test_process(4, 1.0),
+        ];
+        assert_snapshot!(test_format(processes));
     }
 }
