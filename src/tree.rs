@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -36,13 +37,13 @@ pub(crate) trait Node {
 }
 
 #[derive(Debug)]
-pub(crate) struct Forest<Node>(Vec<Tree<Node>>);
-
-#[derive(Debug)]
 pub(crate) struct Tree<Node> {
     node: Node,
     children: Forest<Node>,
 }
+
+#[derive(Debug)]
+pub(crate) struct Forest<Node>(Vec<Tree<Node>>);
 
 impl<Node> Forest<Node>
 where
@@ -84,6 +85,28 @@ where
             });
         }
         result
+    }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Node> {
+        struct Iter<'a, Node>(VecDeque<&'a Tree<Node>>);
+
+        impl<'a, Node> Iterator for Iter<'a, Node> {
+            type Item = &'a Node;
+
+            fn next(&mut self) -> Option<&'a Node> {
+                match self.0.pop_front() {
+                    Some(tree) => {
+                        for child in tree.children.0.iter().rev() {
+                            self.0.push_front(child);
+                        }
+                        Some(&tree.node)
+                    }
+                    None => None,
+                }
+            }
+        }
+
+        Iter(self.0.iter().rev().collect())
     }
 
     fn sort(&mut self) {
@@ -716,6 +739,29 @@ mod test {
                     ━━━━━━╋━━━━━━━━━━━━━━━━━━
                 "
                 .unindent()
+            );
+        }
+    }
+
+    mod k_iterators {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn a_iterates_through_all_the_nodes() {
+            let tree = Forest::new_forest(
+                vec![
+                    TestNode::new(1, None),
+                    TestNode::new(2, Some(1)),
+                    TestNode::new(3, Some(2)),
+                    TestNode::new(4, Some(1)),
+                ]
+                .into_iter(),
+            );
+            eprintln!("{}", tree.test_format(|_| true, 25));
+            assert_eq!(
+                tree.iter().map(Node::id).collect::<Vec<u8>>(),
+                vec![1, 2, 3, 4]
             );
         }
     }
