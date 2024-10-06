@@ -32,15 +32,18 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn run(system: sysinfo::System, pattern: Option<String>) -> R<()> {
-        let app = PorcApp {
-            process_watcher: ProcessWatcher::new(system),
+    pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<String>) -> PorcApp {
+        PorcApp {
+            process_watcher,
             processes: Vec::new(),
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
-        };
-        tui_app::run_ui(app)
+        }
+    }
+
+    pub(crate) fn run(self) -> R<()> {
+        tui_app::run_ui(self)
     }
 }
 
