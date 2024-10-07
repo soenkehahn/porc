@@ -31,8 +31,6 @@ pub(crate) trait Node {
 
     fn parent(&self) -> Option<Self::Id>;
 
-    fn cmp(&self, other: &Self) -> Ordering;
-
     fn accumulate_from(&mut self, other: &Self);
 }
 
@@ -67,7 +65,6 @@ where
         }
         let mut result = Forest::mk_forest(&mut node_map, &mut children_map, roots);
         result.compute_accumulate();
-        result.sort();
         result
     }
 
@@ -109,10 +106,13 @@ where
         Iter(self.0.iter().rev().collect())
     }
 
-    fn sort(&mut self) {
-        self.0.sort_by(|a, b| a.node.cmp(&b.node));
+    pub(crate) fn sort_by<F>(&mut self, compare: &F)
+    where
+        F: Fn(&Node, &Node) -> Ordering,
+    {
+        self.0.sort_by(|a, b| compare(&a.node, &b.node));
         for tree in self.0.iter_mut() {
-            tree.children.sort();
+            tree.children.sort_by(compare);
         }
     }
 
@@ -266,10 +266,6 @@ mod test {
             self.parent
         }
 
-        fn cmp(&self, other: &Self) -> Ordering {
-            self.id.cmp(&other.id)
-        }
-
         fn accumulate_from(&mut self, _other: &Self) {}
     }
 
@@ -399,9 +395,10 @@ mod test {
     }
 
     #[test]
-    fn g_sorts_roots_by_id() {
-        let tree =
+    fn g_allows_sorting_roots_by_cmp() {
+        let mut tree =
             Forest::new_forest(vec![TestNode::new(2, None), TestNode::new(1, None)].into_iter());
+        tree.sort_by(&|a, b| a.id.cmp(&b.id));
         assert_eq!(
             tree.test_format(|_| true, 25),
             "
@@ -602,10 +599,6 @@ mod test {
                 self.parent
             }
 
-            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                other.to_accumulate.cmp(&self.to_accumulate)
-            }
-
             fn accumulate_from(&mut self, other: &Self) {
                 self.to_accumulate += other.to_accumulate;
             }
@@ -710,10 +703,6 @@ mod test {
                 }
 
                 fn parent(&self) -> Option<Self::Id> {
-                    todo!()
-                }
-
-                fn cmp(&self, _other: &Self) -> Ordering {
                     todo!()
                 }
 
