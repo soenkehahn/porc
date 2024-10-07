@@ -103,11 +103,33 @@ impl Process {
         }
     }
 
-    pub(crate) fn compare(&self, other: &Process) -> std::cmp::Ordering {
-        match other.cpu.partial_cmp(&self.cpu) {
+    pub(crate) fn compare(&self, other: &Process, sort_by: SortBy) -> std::cmp::Ordering {
+        let ordering = match sort_by {
+            SortBy::Pid => self.id().partial_cmp(&other.id()),
+            SortBy::Cpu => other.cpu.partial_cmp(&self.cpu),
+            SortBy::Ram => other.ram.partial_cmp(&self.ram),
+        };
+        match ordering {
             Some(std::cmp::Ordering::Equal) => self.pid.cmp(&other.pid),
             Some(ordering) => ordering,
             None => self.pid.cmp(&other.pid),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum SortBy {
+    Pid,
+    Cpu,
+    Ram,
+}
+
+impl SortBy {
+    pub(crate) fn next(self) -> SortBy {
+        match self {
+            SortBy::Pid => SortBy::Cpu,
+            SortBy::Cpu => SortBy::Ram,
+            SortBy::Ram => SortBy::Pid,
         }
     }
 }

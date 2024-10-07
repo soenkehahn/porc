@@ -1,4 +1,5 @@
 use crate::process::ProcessWatcher;
+use crate::process::SortBy;
 use crate::{
     process::Process,
     tree::Node,
@@ -22,6 +23,7 @@ pub(crate) struct PorcApp {
     pattern: String,
     list_state: ListState,
     ui_mode: UiMode,
+    sort_column: SortBy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +41,7 @@ impl PorcApp {
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
+            sort_column: SortBy::Cpu,
         }
     }
 
@@ -84,6 +87,11 @@ impl tui_app::TuiApp for PorcApp {
             (KeyModifiers::NONE, _, KeyCode::Char('/')) => {
                 self.ui_mode = UiMode::EditingPattern;
             }
+            (KeyModifiers::NONE, _, KeyCode::Tab) => {
+                self.sort_column = self.sort_column.next();
+            }
+
+            // mode specific actions
             (
                 KeyModifiers::NONE,
                 UiMode::EditingPattern | UiMode::ProcessSelected(_),
@@ -112,7 +120,7 @@ impl tui_app::TuiApp for PorcApp {
             _ => {}
         }
         let mut tree = Process::new_process_forest(&self.process_watcher);
-        tree.sort_by(&Process::compare);
+        tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
         Ok(UpdateResult::Continue)
     }
@@ -213,7 +221,7 @@ impl tui_app::TuiApp for PorcApp {
     fn tick(&mut self) {
         self.process_watcher.refresh();
         let mut tree = Process::new_process_forest(&self.process_watcher);
-        tree.sort_by(&Process::compare);
+        tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
             if !tree.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
@@ -239,6 +247,7 @@ fn normalize_list_state<T>(list_state: &mut ListState, list: &Vec<T>, rect: &Rec
 mod test {
     use super::*;
     use crate::tui_app::TuiApp;
+    use crossterm::event::{KeyEventKind, KeyEventState};
     use insta::assert_snapshot;
     use ratatui::layout::Rect;
     use ratatui::widgets::ListState;
@@ -279,9 +288,13 @@ mod test {
         assert_eq!(list_state.offset(), 10);
     }
 
-    fn test_format(processes: Vec<Process>) -> String {
+    fn test_app(processes: Vec<Process>) -> PorcApp {
         let mut app = PorcApp::new(ProcessWatcher::test_watcher(processes), None);
         app.tick();
+        app
+    }
+
+    fn render_ui(app: PorcApp) -> String {
         app.processes
             .iter()
             .map(|tuple| tuple.1.clone())
@@ -291,12 +304,36 @@ mod test {
 
     #[test]
     fn processes_get_sorted_by_cpu_usage() {
-        let processes = vec![
-            Process::test_process(1, 3.0),
-            Process::test_process(2, 4.0),
-            Process::test_process(3, 2.0),
-            Process::test_process(4, 1.0),
-        ];
-        assert_snapshot!(test_format(processes));
+        let app = test_app(vec![
+            Process::test_process(1, 1.0),
+            Process::test_process(2, 2.0),
+            Process::test_process(3, 4.0),
+            Process::test_process(4, 3.0),
+        ]);
+        assert_snapshot!(render_ui(app));
+    }
+
+    #[test]
+    fn processes_can_be_sorted_by_pid() -> R<()> {
+        let mut app = test_app(vec![
+            Process::test_process(1, 1.0),
+            Process::test_process(2, 2.0),
+            Process::test_process(3, 4.0),
+            Process::test_process(4, 3.0),
+        ]);
+        app.tick();
+        let tab = KeyEvent {
+            code: KeyCode::Tab,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE,
+        };
+        dbg!(&app.sort_column);
+        app.update(tab)?;
+        dbg!(&app.sort_column);
+        app.update(tab)?;
+        dbg!(&app.sort_column);
+        assert_snapshot!(render_ui(app));
+        Ok(())
     }
 }
