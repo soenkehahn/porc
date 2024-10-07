@@ -63,14 +63,6 @@ impl Node for Process {
         self.parent
     }
 
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match other.cpu.partial_cmp(&self.cpu) {
-            Some(std::cmp::Ordering::Equal) => self.pid.cmp(&other.pid),
-            Some(ordering) => ordering,
-            None => self.pid.cmp(&other.pid),
-        }
-    }
-
     fn accumulate_from(&mut self, other: &Self) {
         self.cpu += other.cpu;
         self.ram += other.ram;
@@ -108,6 +100,14 @@ impl Process {
             ProcessWatcher(ProcessWatcherInner::TestWatcher { processes }) => {
                 Forest::new_forest(processes.iter().cloned())
             }
+        }
+    }
+
+    pub(crate) fn compare(&self, other: &Process) -> std::cmp::Ordering {
+        match other.cpu.partial_cmp(&self.cpu) {
+            Some(std::cmp::Ordering::Equal) => self.pid.cmp(&other.pid),
+            Some(ordering) => ordering,
+            None => self.pid.cmp(&other.pid),
         }
     }
 }
