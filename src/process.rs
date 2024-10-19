@@ -125,8 +125,8 @@ impl Process {
             line.push_span(" ");
             line
         };
+        buffer.set_line(area.x, area.y, &table_header, area.width);
         if let Ok(table_header_length) = table_header.width().try_into() {
-            buffer.set_line(area.x, area.y, &table_header, area.width);
             if let Some(cell) = buffer.cell_mut((table_header_length, area.y)) {
                 cell.set_symbol("┃");
             }
