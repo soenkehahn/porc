@@ -173,12 +173,12 @@ pub(crate) mod test {
     use super::*;
 
     impl Process {
-        pub(crate) fn test_process(pid: usize, cpu: f32) -> Process {
+        pub(crate) fn test_process(pid: usize, cpu: f32, parent: Option<usize>) -> Process {
             Process {
                 pid: pid.into(),
                 name: crate::utils::test::render_number(pid).to_string(),
                 arguments: Vec::new(),
-                parent: None,
+                parent: parent.map(From::from),
                 cpu,
                 ram: 0,
             }

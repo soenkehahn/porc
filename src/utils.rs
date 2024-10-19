@@ -6,6 +6,7 @@ pub(crate) mod test {
             2 => "two",
             3 => "three",
             4 => "four",
+            5 => "five",
             n => panic!("TestNode out of range: {}", n),
         }
     }
