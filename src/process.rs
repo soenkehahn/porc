@@ -42,10 +42,6 @@ impl Node for Process {
         self.pid
     }
 
-    fn table_header() -> String {
-        "     pid   cpu       ram".to_owned()
-    }
-
     fn table_data(&self) -> String {
         format!(
             "{:>8} {:>4.0}% {:>7}MB",
@@ -114,6 +110,19 @@ impl Process {
             Some(ordering) => ordering,
             None => self.pid.cmp(&other.pid),
         }
+    }
+
+    pub(crate) fn format_header(width: usize) -> Vec<String> {
+        let table_header = "     pid   cpu       ram";
+        let mut first = String::new();
+        first += table_header;
+        first += " ┃ ";
+        first += &Self::node_header();
+        let mut second = String::new();
+        second += &"━".repeat(table_header.len() + 1);
+        second += "╋";
+        second += &"━".repeat(width.saturating_sub(table_header.len() + 2));
+        vec![first, second]
     }
 }
 
