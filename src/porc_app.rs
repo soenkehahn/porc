@@ -285,7 +285,7 @@ mod test {
     }
 
     fn render_ui(mut app: PorcApp) -> String {
-        let area = Rect::new(0, 0, 40, 20);
+        let area = Rect::new(0, 0, 80, 10);
         let mut buffer = Buffer::filled(area, Cell::new(" "));
         app.render(area, &mut buffer);
         let mut result = String::new();
