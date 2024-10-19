@@ -12,7 +12,7 @@
           overlays = [ cargo2nix.overlays.default ];
         };
         rustPkgs = pkgs.rustBuilder.makePackageSet {
-          rustVersion = "1.73.0";
+          rustVersion = "1.75.0";
           packageFun = import ./Cargo.nix;
           extraRustComponents = [ "clippy" ];
         };
