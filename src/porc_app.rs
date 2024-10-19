@@ -126,7 +126,7 @@ impl tui_app::TuiApp for PorcApp {
     }
 
     fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Process::format_header(area.width.into());
+        let header = Process::format_header(area.width.into(), self.sort_column);
         let header_len = header.len() as u16;
         Widget::render(
             List::new(header),

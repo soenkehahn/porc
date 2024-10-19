@@ -112,16 +112,20 @@ impl Process {
         }
     }
 
-    pub(crate) fn format_header(width: usize) -> Vec<String> {
-        let table_header = "     pid   cpu       ram";
+    pub(crate) fn format_header(width: usize, sort_by: SortBy) -> Vec<String> {
+        let table_header = match sort_by {
+            SortBy::Pid => "    [pid]  cpu       ram ",
+            SortBy::Cpu => "     pid  [cpu]      ram ",
+            SortBy::Ram => "     pid   cpu      [ram]",
+        };
         let mut first = String::new();
         first += table_header;
-        first += " ┃ ";
+        first += "┃ ";
         first += &Self::node_header();
         let mut second = String::new();
-        second += &"━".repeat(table_header.len() + 1);
+        second += &"━".repeat(table_header.len());
         second += "╋";
-        second += &"━".repeat(width.saturating_sub(table_header.len() + 2));
+        second += &"━".repeat(width.saturating_sub(table_header.len() + 1));
         vec![first, second]
     }
 }
