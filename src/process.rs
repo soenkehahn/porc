@@ -58,10 +58,6 @@ impl Node for Process {
         )
     }
 
-    fn node_header() -> String {
-        "executable".to_owned()
-    }
-
     fn parent(&self) -> Option<Pid> {
         self.parent
     }
@@ -133,7 +129,7 @@ impl Process {
             buffer.set_string(
                 area.x + table_header_length + 2,
                 area.y,
-                Self::node_header(),
+                "executable",
                 Style::new(),
             );
             for x in (area.x)..(area.width) {

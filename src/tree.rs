@@ -13,8 +13,6 @@ pub(crate) trait Node {
 
     fn table_data(&self) -> String;
 
-    fn node_header() -> String;
-
     fn parent(&self) -> Option<Self::Id>;
 
     fn accumulate_from(&mut self, other: &Self);
@@ -237,10 +235,6 @@ mod test {
 
         fn table_data(&self) -> String {
             self.id.to_string()
-        }
-
-        fn node_header() -> String {
-            "number".to_string()
         }
 
         fn parent(&self) -> Option<usize> {
@@ -540,10 +534,6 @@ mod test {
 
             fn table_data(&self) -> String {
                 self.id.to_string()
-            }
-
-            fn node_header() -> String {
-                "number".to_owned()
             }
 
             fn parent(&self) -> Option<u8> {
