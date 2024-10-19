@@ -26,18 +26,18 @@ struct Args {
 }
 
 #[derive(Debug, Clone)]
-struct ValidatedRegexString(String);
+struct ValidatedRegexString(Regex);
 
 impl Default for ValidatedRegexString {
     fn default() -> Self {
-        Self("".to_string())
+        Self(dbg!(Regex::new("")).unwrap())
     }
 }
 
 impl ValidatedRegexString {
     fn new(regex: &str) -> R<Self> {
-        Regex::new(regex)?;
-        Ok(ValidatedRegexString(regex.to_string()))
+        let regex = Regex::new(regex)?;
+        Ok(ValidatedRegexString(regex))
     }
 
     fn value_parser() -> ValueParser {

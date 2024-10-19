@@ -40,7 +40,7 @@ impl PorcApp {
         process_watcher: ProcessWatcher,
         regex: Option<ValidatedRegexString>,
     ) -> R<PorcApp> {
-        let mut app = PorcApp {
+        let app = PorcApp {
             process_watcher,
             processes: Vec::new(),
             pattern: "".to_string(),
@@ -49,7 +49,7 @@ impl PorcApp {
             ui_mode: UiMode::Normal,
             sort_column: SortBy::default(),
         };
-        app.modify_regex(|r| *r = regex.unwrap_or_default().0);
+        // app.modify_regex(|r| *r = regex.unwrap_or_default().0);
         Ok(app)
     }
 
