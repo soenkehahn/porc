@@ -119,7 +119,7 @@ impl tui_app::TuiApp for PorcApp {
             }
             _ => {}
         }
-        let mut tree = Process::new_process_forest(&self.process_watcher);
+        let mut tree = self.process_watcher.get_forest();
         tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
         self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
         Ok(UpdateResult::Continue)
@@ -209,7 +209,7 @@ impl tui_app::TuiApp for PorcApp {
 
     fn tick(&mut self) {
         self.process_watcher.refresh();
-        let mut tree = Process::new_process_forest(&self.process_watcher);
+        let mut tree = self.process_watcher.get_forest();
         tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
             if !tree.iter().any(|node| node.id() == selected) {

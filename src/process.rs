@@ -90,22 +90,6 @@ impl Process {
         }
     }
 
-    pub(crate) fn new_process_forest(processes: &ProcessWatcher) -> Forest<Process> {
-        match processes {
-            ProcessWatcher(ProcessWatcherInner::Production { system }) => Forest::new_forest(
-                system
-                    .processes()
-                    .values()
-                    .filter(|process| process.thread_kind() != Some(ThreadKind::Userland))
-                    .map(Process::from_sysinfo_process),
-            ),
-            #[cfg(test)]
-            ProcessWatcher(ProcessWatcherInner::TestWatcher { processes }) => {
-                Forest::new_forest(processes.iter().cloned())
-            }
-        }
-    }
-
     pub(crate) fn compare(&self, other: &Process, sort_by: SortBy) -> std::cmp::Ordering {
         let ordering = match sort_by {
             SortBy::Pid => self.id().partial_cmp(&other.id()),
@@ -217,6 +201,22 @@ impl ProcessWatcher {
                 ),
             #[cfg(test)]
             ProcessWatcher(ProcessWatcherInner::TestWatcher { .. }) => {}
+        }
+    }
+
+    pub(crate) fn get_forest(&self) -> Forest<Process> {
+        match self {
+            ProcessWatcher(ProcessWatcherInner::Production { system }) => Forest::new_forest(
+                system
+                    .processes()
+                    .values()
+                    .filter(|process| process.thread_kind() != Some(ThreadKind::Userland))
+                    .map(Process::from_sysinfo_process),
+            ),
+            #[cfg(test)]
+            ProcessWatcher(ProcessWatcherInner::TestWatcher { processes }) => {
+                Forest::new_forest(processes.iter().cloned())
+            }
         }
     }
 }
