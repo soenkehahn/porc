@@ -366,13 +366,13 @@ mod test {
     #[test]
     fn g_allows_sorting_roots_by_cmp() {
         let mut tree =
-            Forest::new_forest(vec![TestNode::new(2, None), TestNode::new(1, None)].into_iter());
-        tree.sort_by(&|a, b| a.id.cmp(&b.id));
+            Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter());
+        tree.sort_by(&|a, b| b.id.cmp(&a.id));
         assert_eq!(
             tree.test_format(|_| true),
             "
-                1 ┃ one
                 2 ┃ two
+                1 ┃ one
             "
             .unindent()
         );
