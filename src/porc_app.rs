@@ -41,7 +41,7 @@ impl PorcApp {
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
-            sort_column: SortBy::Pid,
+            sort_column: SortBy::default(),
         }
     }
 

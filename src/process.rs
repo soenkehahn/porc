@@ -152,6 +152,12 @@ pub(crate) enum SortBy {
     Ram,
 }
 
+impl Default for SortBy {
+    fn default() -> SortBy {
+        SortBy::Pid
+    }
+}
+
 impl SortBy {
     pub(crate) fn next(self) -> SortBy {
         match self {
