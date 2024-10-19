@@ -9,7 +9,6 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use std::fmt;
-use std::iter::repeat;
 use std::path::Path;
 use sysinfo::Pid;
 use sysinfo::ProcessRefreshKind;
@@ -108,7 +107,7 @@ impl Process {
                     SortBy::Cpu => 3,
                     SortBy::Ram => 7,
                 };
-                line.push_span(repeat(" ").take(leading_spaces).collect::<String>());
+                line.push_span(" ".repeat(leading_spaces));
                 line.push_span(Span::styled(
                     format!("{:?}", column).to_lowercase(),
                     if column == sort_by {
