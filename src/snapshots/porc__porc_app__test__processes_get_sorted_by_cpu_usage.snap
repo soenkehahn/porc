@@ -1,8 +1,24 @@
 ---
 source: src/porc_app.rs
-expression: render_ui(app)
+expression: render_foo(app)
 ---
-       3    4%       0MB ┃ three
-       4    3%       0MB ┃ four
-       2    2%       0MB ┃ two
-       1    1%       0MB ┃ one
+     pid   cpu       ram ┃ executable   
+━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━
+       3    4%       0MB ┃ three        
+       4    3%       0MB ┃ four         
+       2    2%       0MB ┃ two          
+       1    1%       0MB ┃ one          
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+Ctrl+C: Quit | ↑↓ : scroll | ENTER: sele

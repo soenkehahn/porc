@@ -249,6 +249,7 @@ mod test {
     use crate::tui_app::TuiApp;
     use crossterm::event::{KeyEventKind, KeyEventState};
     use insta::assert_snapshot;
+    use ratatui::buffer::Cell;
     use ratatui::layout::Rect;
     use ratatui::widgets::ListState;
 
@@ -294,12 +295,18 @@ mod test {
         app
     }
 
-    fn render_ui(app: PorcApp) -> String {
-        app.processes
-            .iter()
-            .map(|tuple| tuple.1.clone())
-            .collect::<Vec<String>>()
-            .join("\n")
+    fn render_ui(mut app: PorcApp) -> String {
+        let area = Rect::new(0, 0, 40, 20);
+        let mut buffer = Buffer::filled(area, Cell::new(" "));
+        app.render(area, &mut buffer);
+        let mut result = String::new();
+        for y in 0..area.height {
+            for x in 0..area.width {
+                result.push_str(buffer[(x, y)].symbol())
+            }
+            result.push('\n')
+        }
+        result
     }
 
     #[test]
