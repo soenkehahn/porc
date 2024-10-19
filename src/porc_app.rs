@@ -335,16 +335,12 @@ mod test {
             Process::fake(3, 4.0, None),
             Process::fake(4, 3.0, None),
         ]);
-        app.tick();
-        let tab = KeyEvent {
+        app.update(KeyEvent {
             code: KeyCode::Tab,
             modifiers: KeyModifiers::NONE,
             kind: KeyEventKind::Press,
             state: KeyEventState::NONE,
-        };
-        dbg!(&app.sort_column);
-        app.update(tab)?;
-        dbg!(&app.sort_column);
+        })?;
         assert_snapshot!(render_ui(app));
         Ok(())
     }
