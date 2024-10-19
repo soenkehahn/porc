@@ -279,7 +279,7 @@ mod test {
     }
 
     fn test_app(processes: Vec<Process>) -> PorcApp {
-        let mut app = PorcApp::new(ProcessWatcher::test_watcher(processes), None);
+        let mut app = PorcApp::new(ProcessWatcher::fake(processes), None);
         app.tick();
         app
     }
@@ -307,11 +307,11 @@ mod test {
     #[test]
     fn shows_a_tree_with_header_and_side_columns() {
         let app = test_app(vec![
-            Process::test_process(1, 4.0, None),
-            Process::test_process(2, 3.0, Some(1)),
-            Process::test_process(3, 2.0, Some(2)),
-            Process::test_process(4, 1.0, None),
-            Process::test_process(5, 0.0, Some(4)),
+            Process::fake(1, 4.0, None),
+            Process::fake(2, 3.0, Some(1)),
+            Process::fake(3, 2.0, Some(2)),
+            Process::fake(4, 1.0, None),
+            Process::fake(5, 0.0, Some(4)),
         ]);
         assert_snapshot!(render_ui(app));
     }
@@ -319,10 +319,10 @@ mod test {
     #[test]
     fn processes_get_sorted_by_pid() {
         let app = test_app(vec![
-            Process::test_process(1, 1.0, None),
-            Process::test_process(2, 2.0, None),
-            Process::test_process(3, 4.0, None),
-            Process::test_process(4, 3.0, None),
+            Process::fake(1, 1.0, None),
+            Process::fake(2, 2.0, None),
+            Process::fake(3, 4.0, None),
+            Process::fake(4, 3.0, None),
         ]);
         assert_snapshot!(render_ui(app));
     }
@@ -330,10 +330,10 @@ mod test {
     #[test]
     fn processes_can_be_sorted_by_cpu() -> R<()> {
         let mut app = test_app(vec![
-            Process::test_process(1, 1.0, None),
-            Process::test_process(2, 2.0, None),
-            Process::test_process(3, 4.0, None),
-            Process::test_process(4, 3.0, None),
+            Process::fake(1, 1.0, None),
+            Process::fake(2, 2.0, None),
+            Process::fake(3, 4.0, None),
+            Process::fake(4, 3.0, None),
         ]);
         app.tick();
         let tab = KeyEvent {

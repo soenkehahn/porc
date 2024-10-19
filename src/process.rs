@@ -227,7 +227,7 @@ pub(crate) mod test {
     use super::*;
 
     impl Process {
-        pub(crate) fn test_process(pid: usize, cpu: f32, parent: Option<usize>) -> Process {
+        pub(crate) fn fake(pid: usize, cpu: f32, parent: Option<usize>) -> Process {
             Process {
                 pid: pid.into(),
                 name: crate::utils::test::render_number(pid).to_string(),
@@ -240,7 +240,7 @@ pub(crate) mod test {
     }
 
     impl ProcessWatcher {
-        pub(crate) fn test_watcher(processes: Vec<Process>) -> ProcessWatcher {
+        pub(crate) fn fake(processes: Vec<Process>) -> ProcessWatcher {
             ProcessWatcher(ProcessWatcherInner::TestWatcher { processes })
         }
     }
