@@ -124,20 +124,21 @@ impl Process {
             let mut line = Line::default();
             for column in SortBy::all() {
                 let leading_spaces = match column {
-                    SortBy::Pid => 4,
-                    SortBy::Cpu => 1,
-                    SortBy::Ram => 5,
+                    SortBy::Pid => 5,
+                    SortBy::Cpu => 3,
+                    SortBy::Ram => 7,
                 };
                 line.push_span(repeat(" ").take(leading_spaces).collect::<String>());
-                line.push_span(if column == sort_by {
-                    Span::styled(
-                        format!("[{:?}]", column).to_lowercase(),
-                        Style::new().add_modifier(Modifier::REVERSED),
-                    )
-                } else {
-                    Span::styled(format!(" {:?} ", column).to_lowercase(), Style::new())
-                });
+                line.push_span(Span::styled(
+                    format!("{:?}", column).to_lowercase(),
+                    if column == sort_by {
+                        Style::new().add_modifier(Modifier::REVERSED)
+                    } else {
+                        Style::new()
+                    },
+                ));
             }
+            line.push_span(" ");
             line
         };
         if let Ok(table_header_length) = table_header.width().try_into() {

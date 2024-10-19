@@ -2,7 +2,7 @@
 source: src/porc_app.rs
 expression: render_ui(app)
 ---
-     pid  [͟c͟p͟u͟]͟      ram ┃ executable   
+     pid   c͟p͟u͟       ram ┃ executable   
 ━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━
  ͟ ͟ ͟ ͟ ͟ ͟ ͟3͟ ͟ ͟ ͟ ͟4͟%͟ ͟ ͟ ͟ ͟ ͟ ͟ ͟0͟M͟B͟ ͟┃͟ ͟t͟h͟r͟e͟e͟ ͟ ͟ ͟ ͟ ͟ ͟ ͟ ͟
        4    3%       0MB ┃ four         
