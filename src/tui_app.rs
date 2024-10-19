@@ -1,4 +1,3 @@
-
 use crate::R;
 use crossterm::{
     event::{self, KeyEvent, KeyEventKind},
@@ -45,15 +44,33 @@ impl<T: TuiApp> StatefulWidget for &mut AppWrapper<T> {
     }
 }
 
-pub(crate) fn run_ui<T: TuiApp>(mut app: T) -> R<()> {
+pub(crate) fn run_ui<T: TuiApp>(app: T) -> R<()> {
     let termination_signal_received = setup_signal_handlers()?;
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     std::panic::set_hook(Box::new(|panic_info| {
-        let _ = stdout().execute(LeaveAlternateScreen);
-        let _ = disable_raw_mode();
+        let _ = reset_terminal();
         eprintln!("panic: {}", panic_info);
     }));
+    match main_loop(app, termination_signal_received) {
+        Err(err) => {
+            let _ = reset_terminal();
+            Err(err)
+        }
+        Ok(()) => {
+            reset_terminal()?;
+            Ok(())
+        }
+    }
+}
+
+fn reset_terminal() -> R<()> {
+    stdout().execute(LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+    Ok(())
+}
+
+fn main_loop<T: TuiApp>(mut app: T, termination_signal_received: Arc<AtomicBool>) -> R<()> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
     let tick_length = Duration::from_millis(1000);
@@ -85,8 +102,6 @@ pub(crate) fn run_ui<T: TuiApp>(mut app: T) -> R<()> {
         }
         redraw(&mut terminal, &mut app)?;
     }
-    stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
     Ok(())
 }
 
