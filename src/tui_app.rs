@@ -101,7 +101,7 @@ fn setup_signal_handlers() -> R<Arc<AtomicBool>> {
 
 fn redraw<T: TuiApp>(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut T) -> R<()> {
     terminal.draw(|frame| {
-        frame.render_stateful_widget(&mut AppWrapper(PhantomData), frame.size(), app);
+        frame.render_stateful_widget(&mut AppWrapper(PhantomData), frame.area(), app);
     })?;
     Ok(())
 }
