@@ -19,6 +19,15 @@
       in
       {
         packages.default = rustPkgs.workspace.porc { };
+        checks = {
+          test = pkgs.rustBuilder.runTests rustPkgs.workspace.porc {
+            testCommand = bin:
+              ''
+                export INSTA_WORKSPACE_ROOT=${./.}
+                ${bin}
+              '';
+          };
+        };
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.rust-analyzer pkgs.cargo-insta ];
         };
