@@ -41,7 +41,7 @@ impl PorcApp {
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
-            sort_column: SortBy::Cpu,
+            sort_column: SortBy::Pid,
         }
     }
 
@@ -317,7 +317,7 @@ mod test {
     }
 
     #[test]
-    fn processes_get_sorted_by_cpu_usage() {
+    fn processes_get_sorted_by_pid() {
         let app = test_app(vec![
             Process::test_process(1, 1.0, None),
             Process::test_process(2, 2.0, None),
@@ -328,7 +328,7 @@ mod test {
     }
 
     #[test]
-    fn processes_can_be_sorted_by_pid() -> R<()> {
+    fn processes_can_be_sorted_by_cpu() -> R<()> {
         let mut app = test_app(vec![
             Process::test_process(1, 1.0, None),
             Process::test_process(2, 2.0, None),
@@ -342,8 +342,6 @@ mod test {
             kind: KeyEventKind::Press,
             state: KeyEventState::NONE,
         };
-        dbg!(&app.sort_column);
-        app.update(tab)?;
         dbg!(&app.sort_column);
         app.update(tab)?;
         dbg!(&app.sort_column);
