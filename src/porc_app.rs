@@ -125,24 +125,13 @@ impl tui_app::TuiApp for PorcApp {
         Ok(UpdateResult::Continue)
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Process::format_header(area.width.into(), self.sort_column);
-        let header_len = header.len() as u16;
-        Widget::render(
-            List::new(header),
-            Rect {
-                x: area.x,
-                y: area.y,
-                width: area.width,
-                height: header_len,
-            },
-            buf,
-        );
+    fn render(&mut self, area: Rect, buffer: &mut Buffer) {
+        let header_height = Process::render_header(area, self.sort_column, buffer);
         let list_rect = Rect {
             x: area.x,
-            y: area.y + header_len,
+            y: area.y + header_height,
             width: area.width,
-            height: area.height - header_len - 1,
+            height: area.height - header_height - 1,
         };
         normalize_list_state(&mut self.list_state, &self.processes, &list_rect);
         let tree_lines = self.processes.iter().map(|x| {
@@ -156,7 +145,7 @@ impl tui_app::TuiApp for PorcApp {
         StatefulWidget::render(
             List::new(tree_lines).highlight_style(Style::new().add_modifier(Modifier::REVERSED)),
             list_rect,
-            buf,
+            buffer,
             &mut self.list_state,
         );
         {
@@ -213,7 +202,7 @@ impl tui_app::TuiApp for PorcApp {
                     width: area.width,
                     height: 1,
                 },
-                buf,
+                buffer,
             );
         }
     }
@@ -302,7 +291,13 @@ mod test {
         let mut result = String::new();
         for y in 0..area.height {
             for x in 0..area.width {
-                result.push_str(buffer[(x, y)].symbol())
+                let symbol = buffer[(x, y)].symbol();
+                let symbol = if buffer[(x, y)].modifier.contains(Modifier::REVERSED) {
+                    crate::utils::test::underline(symbol)
+                } else {
+                    symbol.to_string()
+                };
+                result.push_str(&symbol);
             }
             result.push('\n')
         }

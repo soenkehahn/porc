@@ -2,7 +2,14 @@ pub(crate) use crate::tree::Forest;
 use crate::tree::Node;
 use num_format::Locale;
 use num_format::ToFormattedString;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
 use std::fmt;
+use std::iter::repeat;
 use std::path::Path;
 use sysinfo::Pid;
 use sysinfo::ProcessRefreshKind;
@@ -112,25 +119,53 @@ impl Process {
         }
     }
 
-    pub(crate) fn format_header(width: usize, sort_by: SortBy) -> Vec<String> {
-        let table_header = match sort_by {
-            SortBy::Pid => "    [pid]  cpu       ram ",
-            SortBy::Cpu => "     pid  [cpu]      ram ",
-            SortBy::Ram => "     pid   cpu      [ram]",
+    pub(crate) fn render_header(area: Rect, sort_by: SortBy, buffer: &mut Buffer) -> u16 {
+        let table_header = {
+            let mut line = Line::default();
+            for column in SortBy::all() {
+                let leading_spaces = match column {
+                    SortBy::Pid => 4,
+                    SortBy::Cpu => 1,
+                    SortBy::Ram => 5,
+                };
+                line.push_span(repeat(" ").take(leading_spaces).collect::<String>());
+                line.push_span(if column == sort_by {
+                    Span::styled(
+                        format!("[{:?}]", column).to_lowercase(),
+                        Style::new().add_modifier(Modifier::REVERSED),
+                    )
+                } else {
+                    Span::styled(format!(" {:?} ", column).to_lowercase(), Style::new())
+                });
+            }
+            line
         };
-        let mut first = String::new();
-        first += table_header;
-        first += "┃ ";
-        first += &Self::node_header();
-        let mut second = String::new();
-        second += &"━".repeat(table_header.len());
-        second += "╋";
-        second += &"━".repeat(width.saturating_sub(table_header.len() + 1));
-        vec![first, second]
+        if let Ok(table_header_length) = table_header.width().try_into() {
+            buffer.set_line(area.x, area.y, &table_header, area.width);
+            if let Some(cell) = buffer.cell_mut((table_header_length, area.y)) {
+                cell.set_symbol("┃");
+            }
+            buffer.set_string(
+                area.x + table_header_length + 2,
+                area.y,
+                Self::node_header(),
+                Style::new(),
+            );
+            for x in (area.x)..(area.width) {
+                if let Some(cell) = buffer.cell_mut((x, area.y + 1)) {
+                    cell.set_symbol(if x == table_header_length {
+                        "╋"
+                    } else {
+                        "━"
+                    });
+                }
+            }
+        }
+        2
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SortBy {
     Pid,
     Cpu,
@@ -144,6 +179,10 @@ impl SortBy {
             SortBy::Cpu => SortBy::Ram,
             SortBy::Ram => SortBy::Pid,
         }
+    }
+
+    fn all() -> impl Iterator<Item = SortBy> {
+        vec![SortBy::Pid, SortBy::Cpu, SortBy::Ram].into_iter()
     }
 }
 

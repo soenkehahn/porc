@@ -10,4 +10,7 @@ pub(crate) mod test {
             n => panic!("TestNode out of range: {}", n),
         }
     }
+    pub(crate) fn underline(s: &str) -> String {
+        format!("{}\u{35f}", s)
+    }
 }
