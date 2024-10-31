@@ -52,12 +52,13 @@ impl PorcApp {
     fn update_processes(&mut self) {
         let mut tree = self.process_watcher.get_forest();
         tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
+        tree.filter(|p| p.name.contains(&self.pattern));
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
             if !tree.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
             }
         }
-        self.processes = tree.format_processes(|p| p.name.contains(&self.pattern));
+        self.processes = tree.format_processes();
     }
 }
 

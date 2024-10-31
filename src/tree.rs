@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -30,7 +29,7 @@ pub(crate) struct Forest<Node>(Vec<Tree<Node>>);
 impl<Node> Forest<Node>
 where
     Node: crate::tree::Node + Display,
-    Node::Id: Hash + Eq + Copy,
+    Node::Id: Hash + Eq + Copy + Debug,
 {
     pub(crate) fn new_forest(input: impl Iterator<Item = Node>) -> Self {
         let mut node_map = HashMap::new();
@@ -109,65 +108,47 @@ where
         }
     }
 
-    fn filter<F>(&self, filter: F) -> HashSet<Node::Id>
+    pub(crate) fn filter<F>(&mut self, filter: F)
     where
         F: Fn(&Node) -> bool,
     {
-        let mut result = HashSet::new();
-        self.filter_helper(&filter, false, &mut result);
-        result
+        self.filter_helper(&filter, false);
     }
 
-    fn filter_helper<F>(
-        &self,
-        filter: &F,
-        parent_included: bool,
-        included: &mut HashSet<Node::Id>,
-    ) -> bool
+    fn filter_helper<F>(&mut self, filter: &F, parent_included: bool) -> bool
     where
         F: Fn(&Node) -> bool,
     {
         let mut any_child_included = false;
-        for tree in self.0.iter() {
+        let mut old = Forest(Vec::new());
+        std::mem::swap(self, &mut old);
+        for mut tree in old.0.into_iter() {
             if parent_included || filter(&tree.node) {
-                included.insert(tree.node.id());
-                tree.children.filter_helper(filter, true, included);
+                tree.children.filter_helper(filter, true);
+                self.0.push(tree);
                 any_child_included = true
-            } else if tree.children.filter_helper(filter, false, included) {
-                included.insert(tree.node.id());
+            } else if tree.children.filter_helper(filter, false) {
+                self.0.push(tree);
                 any_child_included = true;
             }
         }
         any_child_included
     }
 
-    pub(crate) fn format_processes<F>(&self, filter: F) -> Vec<(Node::Id, String)>
-    where
-        F: Fn(&Node) -> bool,
-    {
-        let included = self.filter(filter);
+    pub(crate) fn format_processes(&self) -> Vec<(Node::Id, String)> {
         let mut acc = Vec::new();
-        self.format_helper(&included, true, &mut Vec::new(), &mut acc);
+        self.format_helper(true, &mut Vec::new(), &mut acc);
         acc
     }
 
     fn format_helper(
         &self,
-        included: &HashSet<Node::Id>,
         is_root: bool,
         prefixes: &mut Vec<&str>,
         acc: &mut Vec<(Node::Id, String)>,
     ) {
-        let children: Vec<&Tree<Node>> = self
-            .0
-            .iter()
-            .filter(|child| included.contains(&child.node.id()))
-            .collect();
-        for (i, child) in children.iter().enumerate() {
-            let is_last = i == children.len() - 1;
-            if !included.contains(&child.node.id()) {
-                continue;
-            }
+        for (i, child) in self.0.iter().enumerate() {
+            let is_last = i == self.0.len() - 1;
             let mut line = String::new();
             line += &format!("{} ┃ ", child.node.table_data());
             for prefix in prefixes.iter() {
@@ -183,7 +164,7 @@ where
             if !(is_root) {
                 prefixes.push(if is_last { "  " } else { "│ " });
             }
-            child.children.format_helper(included, false, prefixes, acc);
+            child.children.format_helper(false, prefixes, acc);
             prefixes.pop();
         }
     }
@@ -199,17 +180,10 @@ mod test {
     where
         Node: Display,
         Node: crate::tree::Node,
-        Node::Id: Eq + Copy + Hash,
+        Node::Id: Eq + Copy + Hash + Debug,
     {
-        fn test_format<F>(&self, filter: F) -> String
-        where
-            F: Fn(&Node) -> bool,
-        {
-            let table: Vec<String> = self
-                .format_processes(filter)
-                .into_iter()
-                .map(|x| x.1)
-                .collect();
+        fn test_format(&self) -> String {
+            let table: Vec<String> = self.format_processes().into_iter().map(|x| x.1).collect();
             format!("{}\n", table.join("\n"))
         }
     }
@@ -254,7 +228,7 @@ mod test {
     fn a_single_node_tree() {
         let tree = Forest::new_forest(vec![TestNode::new(1, None)].into_iter());
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
             "
@@ -267,7 +241,7 @@ mod test {
         let tree =
             Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, Some(1))].into_iter());
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
                 2 ┃ └── two
@@ -288,7 +262,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
                 2 ┃ ├── two
@@ -310,7 +284,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
                 2 ┃ └─┬ two
@@ -332,7 +306,7 @@ mod test {
             .into_iter(),
         );
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
                 2 ┃ ├─┬ two
@@ -348,7 +322,7 @@ mod test {
         let tree =
             Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter());
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 1 ┃ one
                 2 ┃ two
@@ -363,7 +337,7 @@ mod test {
             Forest::new_forest(vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter());
         tree.sort_by(&|a, b| b.id.cmp(&a.id));
         assert_eq!(
-            tree.test_format(|_| true),
+            tree.test_format(),
             "
                 2 ┃ two
                 1 ┃ one
@@ -378,11 +352,12 @@ mod test {
 
         #[test]
         fn a_filters_nodes() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![TestNode::new(1, None), TestNode::new(2, None)].into_iter(),
             );
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     2 ┃ two
                 "
@@ -392,7 +367,7 @@ mod test {
 
         #[test]
         fn b_shows_children_of_included_nodes() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None),
                     TestNode::new(2, Some(1)),
@@ -400,8 +375,9 @@ mod test {
                 ]
                 .into_iter(),
             );
+            tree.filter(|node| node.id == 1);
             assert_eq!(
-                tree.test_format(|node| node.id == 1),
+                tree.test_format(),
                 "
                     1 ┃ one
                     2 ┃ └── two
@@ -412,7 +388,7 @@ mod test {
 
         #[test]
         fn c_shows_parents_of_included_nodes() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None),
                     TestNode::new(2, Some(1)),
@@ -420,8 +396,10 @@ mod test {
                 ]
                 .into_iter(),
             );
+
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     1 ┃ one
                     2 ┃ └── two
@@ -432,7 +410,7 @@ mod test {
 
         #[test]
         fn d_shows_transitive_parents() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None),
                     TestNode::new(2, Some(1)),
@@ -440,8 +418,9 @@ mod test {
                 ]
                 .into_iter(),
             );
+            tree.filter(|node| node.id == 3);
             assert_eq!(
-                tree.test_format(|node| node.id == 3),
+                tree.test_format(),
                 "
                     1 ┃ one
                     2 ┃ └─┬ two
@@ -453,7 +432,7 @@ mod test {
 
         #[test]
         fn e_bigger() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None),
                     TestNode::new(2, Some(1)),
@@ -462,8 +441,9 @@ mod test {
                 ]
                 .into_iter(),
             );
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     1 ┃ one
                     2 ┃ └─┬ two
@@ -475,7 +455,7 @@ mod test {
 
         #[test]
         fn f_no_unconnected_lines() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None),
                     TestNode::new(2, Some(1)),
@@ -484,8 +464,9 @@ mod test {
                 ]
                 .into_iter(),
             );
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     1 ┃ one
                     2 ┃ └─┬ two
@@ -547,11 +528,12 @@ mod test {
 
         #[test]
         fn a_can_compute_accumulated_values_of_children() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![TestNode::new(1, None, 2), TestNode::new(2, Some(1), 3)].into_iter(),
             );
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     1 ┃ 5
                     2 ┃ └── 3
@@ -562,7 +544,7 @@ mod test {
 
         #[test]
         fn b_accumulates_from_grandchildren() {
-            let tree = Forest::new_forest(
+            let mut tree = Forest::new_forest(
                 vec![
                     TestNode::new(1, None, 2),
                     TestNode::new(2, Some(1), 3),
@@ -570,8 +552,9 @@ mod test {
                 ]
                 .into_iter(),
             );
+            tree.filter(|node| node.id == 2);
             assert_eq!(
-                tree.test_format(|node| node.id == 2),
+                tree.test_format(),
                 "
                     1 ┃ 13
                     2 ┃ └─┬ 11
@@ -596,7 +579,7 @@ mod test {
                 .into_iter(),
             );
             assert_eq!(
-                tree.test_format(|_| true),
+                tree.test_format(),
                 "
                     1 ┃ 12
                     2 ┃ ├─┬ 5
@@ -626,7 +609,7 @@ mod test {
                 ]
                 .into_iter(),
             );
-            eprintln!("{}", tree.test_format(|_| true));
+            eprintln!("{}", tree.test_format());
             assert_eq!(
                 tree.iter().map(Node::id).collect::<Vec<usize>>(),
                 vec![1, 2, 3, 4]
