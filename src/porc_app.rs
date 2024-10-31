@@ -361,4 +361,21 @@ mod test {
         assert_snapshot!(render_ui(app));
         Ok(())
     }
+
+    #[test]
+    fn filtering() -> R<()> {
+        let mut app = test_app(vec![
+            Process::fake(1, 1.0, None),
+            Process::fake(2, 2.0, Some(1)),
+            Process::fake(3, 3.0, Some(2)),
+            Process::fake(4, 4.0, Some(1)),
+            Process::fake(5, 5.0, Some(4)),
+            Process::fake(6, 5.0, Some(4)),
+            Process::fake(7, 5.0, Some(6)),
+        ]);
+        app.pattern = "four".to_owned();
+        app.tick();
+        assert_snapshot!(render_ui(app));
+        Ok(())
+    }
 }
