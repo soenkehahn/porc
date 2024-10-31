@@ -1,5 +1,6 @@
 use crate::process::ProcessWatcher;
 use crate::process::SortBy;
+use crate::tree::Forest;
 use crate::{
     process::Process,
     tree::Node,
@@ -19,7 +20,7 @@ use ratatui::{
 #[derive(Debug)]
 pub(crate) struct PorcApp {
     process_watcher: ProcessWatcher,
-    processes: Vec<(sysinfo::Pid, String)>,
+    forest: Forest<Process>,
     pattern: String,
     list_state: ListState,
     ui_mode: UiMode,
@@ -37,7 +38,7 @@ impl PorcApp {
     pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<String>) -> PorcApp {
         PorcApp {
             process_watcher,
-            processes: Vec::new(),
+            forest: Forest::empty(),
             pattern: pattern.unwrap_or("".to_string()),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
@@ -50,15 +51,15 @@ impl PorcApp {
     }
 
     fn update_processes(&mut self) {
-        let mut tree = self.process_watcher.get_forest();
-        tree.sort_by(&|a, b| Process::compare(a, b, self.sort_column));
-        tree.filter(|p| p.name.contains(&self.pattern));
+        self.forest = self.process_watcher.get_forest();
+        self.forest
+            .sort_by(&|a, b| Process::compare(a, b, self.sort_column));
+        self.forest.filter(|p| p.name.contains(&self.pattern));
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
-            if !tree.iter().any(|node| node.id() == selected) {
+            if !self.forest.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
             }
         }
-        self.processes = tree.format_processes();
     }
 }
 
@@ -91,8 +92,8 @@ impl tui_app::TuiApp for PorcApp {
             }
             (KeyModifiers::NONE, _, KeyCode::Enter) => {
                 if let Some(selected) = self.list_state.selected() {
-                    if let Some(process) = self.processes.get(selected) {
-                        self.ui_mode = UiMode::ProcessSelected(process.0);
+                    if let Some(process) = self.forest.0.get(selected) {
+                        self.ui_mode = UiMode::ProcessSelected(process.node.id());
                     }
                 }
             }
@@ -143,8 +144,9 @@ impl tui_app::TuiApp for PorcApp {
             width: area.width,
             height: area.height - header_height - 1,
         };
-        normalize_list_state(&mut self.list_state, &self.processes, &list_rect);
-        let tree_lines = self.processes.iter().map(|x| {
+        let list = self.forest.format_processes();
+        normalize_list_state(&mut self.list_state, &list, &list_rect);
+        let tree_lines = list.iter().map(|x| {
             let line = Line::raw(x.1.as_str());
             if self.ui_mode == UiMode::ProcessSelected(x.0) {
                 line.patch_style(Color::Red)

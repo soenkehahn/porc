@@ -19,18 +19,22 @@ pub(crate) trait Node {
 
 #[derive(Debug)]
 pub(crate) struct Tree<Node> {
-    node: Node,
-    children: Forest<Node>,
+    pub(crate) node: Node,
+    pub(crate) children: Forest<Node>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Forest<Node>(Vec<Tree<Node>>);
+pub(crate) struct Forest<Node>(pub(crate) Vec<Tree<Node>>);
 
 impl<Node> Forest<Node>
 where
     Node: crate::tree::Node + Display,
     Node::Id: Hash + Eq + Copy + Debug,
 {
+    pub(crate) fn empty() -> Self {
+        Forest(Vec::new())
+    }
+
     pub(crate) fn new_forest(input: impl Iterator<Item = Node>) -> Self {
         let mut node_map = HashMap::new();
         let mut children_map = HashMap::new();
