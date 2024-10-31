@@ -7,6 +7,8 @@ pub(crate) mod test {
             3 => "three",
             4 => "four",
             5 => "five",
+            6 => "six",
+            7 => "seven",
             n => panic!("utils::test::render_number: out of range: {}", n),
         }
     }
