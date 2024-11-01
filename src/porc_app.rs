@@ -9,6 +9,7 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use nix::sys::signal::kill;
+use ratatui::text::Span;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -147,7 +148,10 @@ impl tui_app::TuiApp for PorcApp {
         let list = self.forest.render_forest_prefixes();
         normalize_list_state(&mut self.list_state, &list, &list_rect);
         let tree_lines = list.iter().map(|x| {
-            let line = Line::raw(format!("{} ┃ {}{}", x.1.table_data(), x.0.as_str(), x.1));
+            let mut line = Line::default();
+            line.push_span(format!("{} ┃ ", x.1.table_data()));
+            line.push_span(Span::styled(x.0.as_str(), Style::default().fg(Color::Blue)));
+            line.push_span(format!("{}", x.1));
             if self.ui_mode == UiMode::ProcessSelected(x.1.id()) {
                 line.patch_style(Color::Red)
             } else {
