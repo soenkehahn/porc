@@ -93,8 +93,13 @@ impl tui_app::TuiApp for PorcApp {
             }
             (KeyModifiers::NONE, _, KeyCode::Enter) => {
                 if let Some(selected) = self.list_state.selected() {
-                    if let Some(process) = self.forest.0.get(selected) {
-                        self.ui_mode = UiMode::ProcessSelected(process.node.id());
+                    if let Some(process) = self
+                        .forest
+                        .render_forest_prefixes()
+                        .into_iter()
+                        .nth(selected)
+                    {
+                        self.ui_mode = UiMode::ProcessSelected(process.1.id());
                     }
                 }
             }
@@ -313,6 +318,15 @@ mod test {
         result
     }
 
+    fn simulate_key_press(app: &mut PorcApp, code: KeyCode) -> R<UpdateResult> {
+        app.update(KeyEvent {
+            code,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE,
+        })
+    }
+
     #[test]
     fn shows_a_tree_with_header_and_side_columns() {
         let app = test_app(vec![
@@ -344,12 +358,7 @@ mod test {
             Process::fake(3, 4.0, None),
             Process::fake(4, 3.0, None),
         ]);
-        app.update(KeyEvent {
-            code: KeyCode::Tab,
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Press,
-            state: KeyEventState::NONE,
-        })?;
+        simulate_key_press(&mut app, KeyCode::Tab)?;
         assert_snapshot!(render_ui(app));
         Ok(())
     }
@@ -383,6 +392,25 @@ mod test {
         app.pattern = "four".to_owned();
         app.tick();
         assert_snapshot!(render_ui(app));
+        Ok(())
+    }
+
+    #[test]
+    fn selecting_processes() -> R<()> {
+        let mut app = test_app(vec![
+            Process::fake(1, 0.0, None),
+            Process::fake(2, 0.0, Some(1)),
+            Process::fake(3, 0.0, None),
+            Process::fake(4, 0.0, Some(3)),
+        ]);
+        assert_eq!(app.ui_mode, UiMode::Normal);
+        simulate_key_press(&mut app, KeyCode::Enter)?;
+        assert_eq!(app.ui_mode, UiMode::ProcessSelected(1.into()));
+        simulate_key_press(&mut app, KeyCode::Esc)?;
+        assert_eq!(app.ui_mode, UiMode::Normal);
+        simulate_key_press(&mut app, KeyCode::Down)?;
+        simulate_key_press(&mut app, KeyCode::Enter)?;
+        assert_eq!(app.ui_mode, UiMode::ProcessSelected(2.into()));
         Ok(())
     }
 }

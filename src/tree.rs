@@ -17,12 +17,12 @@ pub(crate) trait Node {
 
 #[derive(Debug)]
 pub(crate) struct Tree<Node> {
-    pub(crate) node: Node,
-    pub(crate) children: Forest<Node>,
+    node: Node,
+    children: Forest<Node>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Forest<Node>(pub(crate) Vec<Tree<Node>>);
+pub(crate) struct Forest<Node>(Vec<Tree<Node>>);
 
 impl<Node> Forest<Node>
 where
