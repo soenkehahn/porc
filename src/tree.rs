@@ -10,8 +10,6 @@ pub(crate) trait Node {
 
     fn id(&self) -> Self::Id;
 
-    fn table_data(&self) -> String;
-
     fn parent(&self) -> Option<Self::Id>;
 
     fn accumulate_from(&mut self, other: &Self);
@@ -139,22 +137,21 @@ where
         any_child_included
     }
 
-    pub(crate) fn format_processes(&self) -> Vec<(Node::Id, String)> {
+    pub(crate) fn render_forest_prefixes(&self) -> Vec<(String, &Node)> {
         let mut acc = Vec::new();
-        self.format_helper(true, &mut Vec::new(), &mut acc);
+        self.render_forest_prefixes_helper(true, &mut Vec::new(), &mut acc);
         acc
     }
 
-    fn format_helper(
-        &self,
+    fn render_forest_prefixes_helper<'a>(
+        &'a self,
         is_root: bool,
         prefixes: &mut Vec<&str>,
-        acc: &mut Vec<(Node::Id, String)>,
+        acc: &mut Vec<(String, &'a Node)>,
     ) {
         for (i, child) in self.0.iter().enumerate() {
             let is_last = i == self.0.len() - 1;
             let mut line = String::new();
-            line += &format!("{} ┃ ", child.node.table_data());
             for prefix in prefixes.iter() {
                 line += prefix;
             }
@@ -163,12 +160,13 @@ where
                 let has_children = !child.children.0.is_empty();
                 line += if has_children { "┬ " } else { "─ " };
             }
-            line += &format!("{}", child.node);
-            acc.push((child.node.id(), line));
+            acc.push((line, &child.node));
             if !(is_root) {
                 prefixes.push(if is_last { "  " } else { "│ " });
             }
-            child.children.format_helper(false, prefixes, acc);
+            child
+                .children
+                .render_forest_prefixes_helper(false, prefixes, acc);
             prefixes.pop();
         }
     }
@@ -187,7 +185,11 @@ mod test {
         Node::Id: Eq + Copy + Hash + Debug,
     {
         fn test_format(&self) -> String {
-            let table: Vec<String> = self.format_processes().into_iter().map(|x| x.1).collect();
+            let table: Vec<String> = self
+                .render_forest_prefixes()
+                .into_iter()
+                .map(|x| format!("{}{}", x.0, x.1))
+                .collect();
             format!("{}\n", table.join("\n"))
         }
     }
@@ -211,10 +213,6 @@ mod test {
             self.id
         }
 
-        fn table_data(&self) -> String {
-            self.id.to_string()
-        }
-
         fn parent(&self) -> Option<usize> {
             self.parent
         }
@@ -234,7 +232,7 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
+                one
             "
             .unindent()
         );
@@ -247,8 +245,8 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
-                2 ┃ └── two
+                one
+                └── two
             "
             .unindent()
         );
@@ -268,10 +266,10 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
-                2 ┃ ├── two
-                3 ┃ ├── three
-                4 ┃ └── four
+                one
+                ├── two
+                ├── three
+                └── four
             "
             .unindent()
         );
@@ -290,9 +288,9 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
-                2 ┃ └─┬ two
-                3 ┃   └── three
+                one
+                └─┬ two
+                  └── three
             "
             .unindent()
         );
@@ -312,10 +310,10 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
-                2 ┃ ├─┬ two
-                3 ┃ │ └── three
-                4 ┃ └── four
+                one
+                ├─┬ two
+                │ └── three
+                └── four
             "
             .unindent()
         );
@@ -328,8 +326,8 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                1 ┃ one
-                2 ┃ two
+                one
+                two
             "
             .unindent()
         );
@@ -343,8 +341,8 @@ mod test {
         assert_eq!(
             tree.test_format(),
             "
-                2 ┃ two
-                1 ┃ one
+                two
+                one
             "
             .unindent()
         );
@@ -363,7 +361,7 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    2 ┃ two
+                    two
                 "
                 .unindent()
             );
@@ -383,8 +381,8 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ one
-                    2 ┃ └── two
+                    one
+                    └── two
                 "
                 .unindent()
             );
@@ -405,8 +403,8 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ one
-                    2 ┃ └── two
+                    one
+                    └── two
                 "
                 .unindent()
             );
@@ -426,9 +424,9 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ one
-                    2 ┃ └─┬ two
-                    3 ┃   └── three
+                    one
+                    └─┬ two
+                      └── three
                 "
                 .unindent()
             );
@@ -449,9 +447,9 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ one
-                    2 ┃ └─┬ two
-                    3 ┃   └── three
+                    one
+                    └─┬ two
+                      └── three
                 "
                 .unindent()
             );
@@ -472,9 +470,9 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ one
-                    2 ┃ └─┬ two
-                    3 ┃   └── three
+                    one
+                    └─┬ two
+                      └── three
                 "
                 .unindent()
             );
@@ -517,10 +515,6 @@ mod test {
                 self.id
             }
 
-            fn table_data(&self) -> String {
-                self.id.to_string()
-            }
-
             fn parent(&self) -> Option<u8> {
                 self.parent
             }
@@ -539,8 +533,8 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ 5
-                    2 ┃ └── 3
+                    5
+                    └── 3
                 "
                 .unindent()
             );
@@ -560,9 +554,9 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ 13
-                    2 ┃ └─┬ 11
-                    3 ┃   └── 8
+                    13
+                    └─┬ 11
+                      └── 8
                 "
                 .unindent()
             );
@@ -585,13 +579,13 @@ mod test {
             assert_eq!(
                 tree.test_format(),
                 "
-                    1 ┃ 12
-                    2 ┃ ├─┬ 5
-                    3 ┃ │ └── 4
-                    4 ┃ ├─┬ 4
-                    5 ┃ │ └── 2
-                    6 ┃ └─┬ 3
-                    7 ┃   └── 0
+                    12
+                    ├─┬ 5
+                    │ └── 4
+                    ├─┬ 4
+                    │ └── 2
+                    └─┬ 3
+                      └── 0
                 "
                 .unindent()
             );

@@ -48,15 +48,6 @@ impl Node for Process {
         self.pid
     }
 
-    fn table_data(&self) -> String {
-        format!(
-            "{:>8} {:>4.0}% {:>7}MB",
-            self.pid.as_u32(),
-            self.cpu,
-            (self.ram / 2_u64.pow(20)).to_formatted_string(&Locale::en)
-        )
-    }
-
     fn parent(&self) -> Option<Pid> {
         self.parent
     }
@@ -142,6 +133,15 @@ impl Process {
             }
         }
         2
+    }
+
+    pub(crate) fn table_data(&self) -> String {
+        format!(
+            "{:>8} {:>4.0}% {:>7}MB",
+            self.pid.as_u32(),
+            self.cpu,
+            (self.ram / 2_u64.pow(20)).to_formatted_string(&Locale::en)
+        )
     }
 }
 

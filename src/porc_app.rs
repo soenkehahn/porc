@@ -144,11 +144,11 @@ impl tui_app::TuiApp for PorcApp {
             width: area.width,
             height: area.height - header_height - 1,
         };
-        let list = self.forest.format_processes();
+        let list = self.forest.render_forest_prefixes();
         normalize_list_state(&mut self.list_state, &list, &list_rect);
         let tree_lines = list.iter().map(|x| {
-            let line = Line::raw(x.1.as_str());
-            if self.ui_mode == UiMode::ProcessSelected(x.0) {
+            let line = Line::raw(format!("{} ┃ {}{}", x.1.table_data(), x.0.as_str(), x.1));
+            if self.ui_mode == UiMode::ProcessSelected(x.1.id()) {
                 line.patch_style(Color::Red)
             } else {
                 line
