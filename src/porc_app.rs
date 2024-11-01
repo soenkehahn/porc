@@ -9,11 +9,10 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use nix::sys::signal::kill;
-use ratatui::text::Span;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style, Stylize},
+    style::Stylize,
     text::Line,
     widgets::{List, ListState, Paragraph, StatefulWidget, Widget},
 };
@@ -152,19 +151,24 @@ impl tui_app::TuiApp for PorcApp {
         };
         let list = self.forest.render_forest_prefixes();
         normalize_list_state(&mut self.list_state, &list, &list_rect);
-        let tree_lines = list.iter().map(|x| {
+        let tree_lines = list.iter().enumerate().map(|(i, x)| {
             let mut line = Line::default();
             line.push_span(format!("{} ┃ ", x.1.table_data()));
-            line.push_span(Span::styled(x.0.as_str(), Style::default().fg(Color::Blue)));
-            line.push_span(format!("{}", x.1));
-            if self.ui_mode == UiMode::ProcessSelected(x.1.id()) {
-                line.patch_style(Color::Red)
+            line.push_span(if &self.list_state.selected() == &Some(i) {
+                "▶ "
             } else {
-                line
-            }
+                "  "
+            });
+            line.push_span(x.0.as_str().blue());
+            line.push_span(if self.ui_mode == UiMode::ProcessSelected(x.1.id()) {
+                x.1.to_string().reversed().red()
+            } else {
+                x.1.to_string().not_reversed()
+            });
+            line
         });
         StatefulWidget::render(
-            List::new(tree_lines).highlight_style(Style::new().add_modifier(Modifier::REVERSED)),
+            List::new(tree_lines),
             list_rect,
             buffer,
             &mut self.list_state,
@@ -254,6 +258,7 @@ mod test {
     use insta::assert_snapshot;
     use ratatui::buffer::Cell;
     use ratatui::layout::Rect;
+    use ratatui::style::Modifier;
     use ratatui::widgets::ListState;
 
     const RECT: Rect = Rect {
