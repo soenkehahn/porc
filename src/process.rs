@@ -4,6 +4,7 @@ use num_format::Locale;
 use num_format::ToFormattedString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use ratatui::prelude::Stylize;
 use ratatui::style::Modifier;
 use ratatui::style::Style;
 use ratatui::text::Line;
@@ -115,6 +116,7 @@ impl Process {
         if let Ok(table_header_length) = table_header.width().try_into() {
             if let Some(cell) = buffer.cell_mut((table_header_length, area.y)) {
                 cell.set_symbol("┃");
+                cell.set_style(Style::new().dark_gray());
             }
             buffer.set_string(
                 area.x + table_header_length + 2,
@@ -129,6 +131,7 @@ impl Process {
                     } else {
                         "━"
                     });
+                    cell.set_style(Style::new().dark_gray());
                 }
             }
         }

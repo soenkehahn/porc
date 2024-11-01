@@ -153,11 +153,12 @@ impl tui_app::TuiApp for PorcApp {
         normalize_list_state(&mut self.list_state, &list, &list_rect);
         let tree_lines = list.iter().enumerate().map(|(i, x)| {
             let mut line = Line::default();
-            line.push_span(format!("{} ┃ ", x.1.table_data()));
+            line.push_span(format!("{} ", x.1.table_data()));
+            line.push_span("┃".dark_gray());
             line.push_span(if &self.list_state.selected() == &Some(i) {
-                "▶ "
+                " ▶ "
             } else {
-                "  "
+                "   "
             });
             line.push_span(x.0.as_str().blue());
             line.push_span(if self.ui_mode == UiMode::ProcessSelected(x.1.id()) {
