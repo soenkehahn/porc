@@ -67,7 +67,7 @@ impl tui_app::TuiApp for PorcApp {
     fn update(&mut self, event: KeyEvent) -> R<UpdateResult> {
         match (event.modifiers, self.ui_mode, event.code) {
             (KeyModifiers::CONTROL, _, KeyCode::Char('c'))
-            | (KeyModifiers::NONE, UiMode::Normal, KeyCode::Char('q')) => {
+            | (KeyModifiers::NONE, UiMode::Normal, KeyCode::Char('q') | KeyCode::Esc) => {
                 return Ok(UpdateResult::Exit);
             }
             (KeyModifiers::NONE, _, KeyCode::Up) => {
@@ -417,6 +417,14 @@ mod test {
         simulate_key_press(&mut app, KeyCode::Down)?;
         simulate_key_press(&mut app, KeyCode::Enter)?;
         assert_eq!(app.ui_mode, UiMode::ProcessSelected(2.into()));
+        Ok(())
+    }
+
+    #[test]
+    fn escape_quits() -> R<()> {
+        let mut app = test_app(vec![]);
+        let result = simulate_key_press(&mut app, KeyCode::Esc)?;
+        assert_eq!(result, UpdateResult::Exit);
         Ok(())
     }
 }
