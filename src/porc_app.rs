@@ -1,5 +1,6 @@
 use crate::process::ProcessWatcher;
 use crate::process::SortBy;
+use crate::regex::Regex;
 use crate::tree::Forest;
 use crate::{
     process::Process,
@@ -21,7 +22,7 @@ use ratatui::{
 pub(crate) struct PorcApp {
     process_watcher: ProcessWatcher,
     forest: Forest<Process>,
-    pattern: String,
+    pattern: Regex,
     list_state: ListState,
     ui_mode: UiMode,
     sort_column: SortBy,
@@ -35,15 +36,15 @@ enum UiMode {
 }
 
 impl PorcApp {
-    pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<String>) -> PorcApp {
-        PorcApp {
+    pub(crate) fn new(process_watcher: ProcessWatcher, pattern: Option<Regex>) -> R<PorcApp> {
+        Ok(PorcApp {
             process_watcher,
             forest: Forest::empty(),
-            pattern: pattern.unwrap_or("".to_string()),
+            pattern: pattern.unwrap_or(Regex::empty()?),
             list_state: ListState::default().with_selected(Some(0)),
             ui_mode: UiMode::Normal,
             sort_column: SortBy::default(),
-        }
+        })
     }
 
     pub(crate) fn run(self) -> R<()> {
@@ -54,7 +55,7 @@ impl PorcApp {
         self.forest = self.process_watcher.get_forest();
         self.forest
             .sort_by(&|a, b| Process::compare(a, b, self.sort_column));
-        self.forest.filter(|p| p.name.contains(&self.pattern));
+        self.forest.filter(|p| self.pattern.is_match(&p.name));
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
             if !self.forest.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
@@ -118,10 +119,12 @@ impl tui_app::TuiApp for PorcApp {
                 self.ui_mode = UiMode::Normal;
             }
             (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Char(key)) if key.is_ascii() => {
-                self.pattern.push(key);
+                self.pattern.modify(|pattern| pattern.push(key));
             }
             (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Backspace) => {
-                self.pattern.pop();
+                self.pattern.modify(|pattern| {
+                    pattern.pop();
+                });
             }
             (KeyModifiers::NONE, UiMode::ProcessSelected(pid), KeyCode::Char('t')) => {
                 kill(
@@ -183,8 +186,8 @@ impl tui_app::TuiApp for PorcApp {
                         "ENTER: select process".to_string(),
                         "/: filter processes".to_string(),
                     ];
-                    if !self.pattern.is_empty() {
-                        commands.push(format!("search pattern: {}", self.pattern));
+                    if !self.pattern.as_str().is_empty() {
+                        commands.push(format!("search pattern: {}", self.pattern.as_str()));
                     }
                     commands.join(" | ")
                 }
@@ -193,7 +196,7 @@ impl tui_app::TuiApp for PorcApp {
                     "↑↓ : scroll",
                     "ENTER: select process",
                     "ESC: exit search mode",
-                    &format!("type search pattern: {}▌", self.pattern),
+                    &format!("type search pattern: {}▌", self.pattern.as_str()),
                 ]
                 .join(" | "),
                 UiMode::ProcessSelected(_pid) => {
@@ -205,8 +208,8 @@ impl tui_app::TuiApp for PorcApp {
                         "ESC: unselect".to_string(),
                         "ENTER: select other".to_string(),
                     ];
-                    if !self.pattern.is_empty() {
-                        commands.push(format!("search pattern: {}", self.pattern));
+                    if !self.pattern.as_str().is_empty() {
+                        commands.push(format!("search pattern: {}", self.pattern.as_str()));
                     }
                     commands.join(" | ")
                 }
@@ -298,10 +301,10 @@ mod test {
         assert_eq!(list_state.offset(), 10);
     }
 
-    fn test_app(processes: Vec<Process>) -> PorcApp {
-        let mut app = PorcApp::new(ProcessWatcher::fake(processes), None);
+    fn test_app(processes: Vec<Process>) -> R<PorcApp> {
+        let mut app = PorcApp::new(ProcessWatcher::fake(processes), None)?;
         app.tick();
-        app
+        Ok(app)
     }
 
     fn render_ui(mut app: PorcApp) -> String {
@@ -334,26 +337,28 @@ mod test {
     }
 
     #[test]
-    fn shows_a_tree_with_header_and_side_columns() {
+    fn shows_a_tree_with_header_and_side_columns() -> R<()> {
         let app = test_app(vec![
             Process::fake(1, 4.0, None),
             Process::fake(2, 3.0, Some(1)),
             Process::fake(3, 2.0, Some(2)),
             Process::fake(4, 1.0, None),
             Process::fake(5, 0.0, Some(4)),
-        ]);
+        ])?;
         assert_snapshot!(render_ui(app));
+        Ok(())
     }
 
     #[test]
-    fn processes_get_sorted_by_pid() {
+    fn processes_get_sorted_by_pid() -> R<()> {
         let app = test_app(vec![
             Process::fake(1, 1.0, None),
             Process::fake(2, 2.0, None),
             Process::fake(3, 4.0, None),
             Process::fake(4, 3.0, None),
-        ]);
+        ])?;
         assert_snapshot!(render_ui(app));
+        Ok(())
     }
 
     #[test]
@@ -363,7 +368,7 @@ mod test {
             Process::fake(2, 2.0, None),
             Process::fake(3, 4.0, None),
             Process::fake(4, 3.0, None),
-        ]);
+        ])?;
         simulate_key_press(&mut app, KeyCode::Tab)?;
         assert_snapshot!(render_ui(app));
         Ok(())
@@ -379,7 +384,7 @@ mod test {
             Process::fake(5, 5.0, Some(4)),
             Process::fake(6, 5.0, Some(4)),
             Process::fake(7, 5.0, Some(6)),
-        ]);
+        ])?;
         assert_snapshot!(render_ui(app));
         Ok(())
     }
@@ -394,10 +399,43 @@ mod test {
             Process::fake(5, 5.0, Some(4)),
             Process::fake(6, 5.0, Some(4)),
             Process::fake(7, 5.0, Some(6)),
-        ]);
-        app.pattern = "four".to_owned();
+        ])?;
+        app.pattern = Regex::new("four")?;
         app.tick();
         assert_snapshot!(render_ui(app));
+        Ok(())
+    }
+
+    #[test]
+    fn filtering_with_regexes() -> R<()> {
+        let mut app = test_app(vec![
+            Process::fake(1, 0.0, None),
+            Process::fake(2, 0.0, Some(1)),
+            Process::fake(3, 0.0, Some(1)),
+            Process::fake(4, 0.0, Some(1)),
+        ])?;
+        app.pattern = Regex::new("two|three")?;
+        app.tick();
+        assert_snapshot!(render_ui(app));
+        Ok(())
+    }
+
+    #[test]
+    fn typing_patterns() -> R<()> {
+        let mut app = test_app(vec![
+            Process::fake(1, 0.0, None),
+            Process::fake(2, 0.0, Some(1)),
+        ])?;
+        simulate_key_press(&mut app, KeyCode::Char('/'))?;
+        simulate_key_press(&mut app, KeyCode::Char('a'))?;
+        simulate_key_press(&mut app, KeyCode::Char('b'))?;
+        assert_eq!(app.pattern.as_str(), "ab");
+        simulate_key_press(&mut app, KeyCode::Backspace)?;
+        assert_eq!(app.pattern.as_str(), "a");
+        simulate_key_press(&mut app, KeyCode::Char('('))?;
+        simulate_key_press(&mut app, KeyCode::Char('b'))?;
+        simulate_key_press(&mut app, KeyCode::Char(')'))?;
+        assert_eq!(app.pattern.as_str(), "a(b)");
         Ok(())
     }
 
@@ -408,7 +446,7 @@ mod test {
             Process::fake(2, 0.0, Some(1)),
             Process::fake(3, 0.0, None),
             Process::fake(4, 0.0, Some(3)),
-        ]);
+        ])?;
         assert_eq!(app.ui_mode, UiMode::Normal);
         simulate_key_press(&mut app, KeyCode::Enter)?;
         assert_eq!(app.ui_mode, UiMode::ProcessSelected(1.into()));
