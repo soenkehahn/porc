@@ -17,8 +17,19 @@
           extraRustComponents = [ "clippy" ];
         };
       in
-      {
-        packages.default = rustPkgs.workspace.porc { };
+      rec {
+        packages = {
+          porc = rustPkgs.workspace.porc { };
+          default = packages.porc;
+          generateCargoNix = pkgs.writeShellApplication
+            {
+              name = "generateCargoNix";
+              runtimeInputs = [ cargo2nix.packages.${system}.default ];
+              text = ''
+                cargo2nix . --overwrite --locked
+              '';
+            };
+        };
         checks = {
           test = pkgs.rustBuilder.runTests rustPkgs.workspace.porc {
             testCommand = bin:
@@ -33,15 +44,7 @@
         };
         apps.generateCargoNix = {
           type = "app";
-          program =
-            pkgs.lib.getExe (pkgs.writeShellApplication
-              {
-                name = "generateCargoNix";
-                runtimeInputs = [ cargo2nix.packages.${system}.default ];
-                text = ''
-                  cargo2nix . --overwrite --locked
-                '';
-              });
+          program = pkgs.lib.getExe packages.generateCargoNix;
         };
       }
     );
