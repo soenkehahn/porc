@@ -8,13 +8,11 @@ pub(crate) enum Regex {
 
 impl Regex {
     pub(crate) fn empty() -> R<Regex> {
-        Regex::new("")
+        Ok(Regex::new(::regex::Regex::new("")?))
     }
 
-    pub(crate) fn new(regex: &str) -> R<Regex> {
-        Ok(Regex::Regex {
-            regex: regex::Regex::new(regex)?,
-        })
+    pub(crate) fn new(regex: ::regex::Regex) -> Regex {
+        Regex::Regex { regex }
     }
 
     pub(crate) fn is_match(&self, s: &str) -> bool {

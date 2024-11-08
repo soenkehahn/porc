@@ -336,6 +336,11 @@ mod test {
         })
     }
 
+    fn set_pattern(app: &mut PorcApp, pattern: &str) -> R<()> {
+        app.pattern = crate::regex::Regex::new(::regex::Regex::new(pattern)?);
+        Ok(())
+    }
+
     #[test]
     fn shows_a_tree_with_header_and_side_columns() -> R<()> {
         let app = test_app(vec![
@@ -400,7 +405,7 @@ mod test {
             Process::fake(6, 5.0, Some(4)),
             Process::fake(7, 5.0, Some(6)),
         ])?;
-        app.pattern = Regex::new("four")?;
+        set_pattern(&mut app, "four")?;
         app.tick();
         assert_snapshot!(render_ui(app));
         Ok(())
@@ -414,7 +419,7 @@ mod test {
             Process::fake(3, 0.0, Some(1)),
             Process::fake(4, 0.0, Some(1)),
         ])?;
-        app.pattern = Regex::new("two|three")?;
+        set_pattern(&mut app, "two|three")?;
         app.tick();
         assert_snapshot!(render_ui(app));
         Ok(())

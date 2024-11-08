@@ -25,7 +25,7 @@ fn main() -> R<()> {
     PorcApp::run(PorcApp::new(
         ProcessWatcher::new(System::new()),
         args.pattern
-            .map(|pattern| Regex::new(&pattern))
+            .map(|pattern| ::regex::Regex::new(&pattern).map(crate::Regex::new))
             .transpose()?,
     )?)
 }
