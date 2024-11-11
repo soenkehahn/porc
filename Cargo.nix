@@ -24,7 +24,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "2e877642cbe7cc25ff8e2c7e9a169049d8bf77b256a6f231a8a1f4c56fe4fd27";
+  nixifiedLockHash = "f96c464adba95270a74c88373187c1491651f88680951ca1e7f8b17cc15f057c";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -751,7 +751,7 @@ in
       ratatui = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".ratatui."0.28.1" { inherit profileName; }).out;
       regex = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".regex."1.11.1" { inherit profileName; }).out;
       signal_hook = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".signal-hook."0.3.17" { inherit profileName; }).out;
-      sysinfo = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".sysinfo."0.31.4" { inherit profileName; }).out;
+      sysinfo = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".sysinfo."0.32.0" { inherit profileName; }).out;
     };
     devDependencies = {
       insta = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".insta."1.40.0" { inherit profileName; }).out;
@@ -1122,11 +1122,11 @@ in
     };
   });
   
-  "registry+https://github.com/rust-lang/crates.io-index".sysinfo."0.31.4" = overridableMkRustCrate (profileName: rec {
+  "registry+https://github.com/rust-lang/crates.io-index".sysinfo."0.32.0" = overridableMkRustCrate (profileName: rec {
     name = "sysinfo";
-    version = "0.31.4";
+    version = "0.32.0";
     registry = "registry+https://github.com/rust-lang/crates.io-index";
-    src = fetchCratesIo { inherit name version; sha256 = "355dbe4f8799b304b05e1b0f05fc59b2a18d36645cf169607da45bde2f69a1be"; };
+    src = fetchCratesIo { inherit name version; sha256 = "e3b5ae3f4f7d64646c46c4cae4e3f01d1c5d255c7406fdd7c7f999a94e488791"; };
     features = builtins.concatLists [
       [ "component" ]
       [ "default" ]

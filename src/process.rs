@@ -203,6 +203,7 @@ impl ProcessWatcher {
             ProcessWatcher(ProcessWatcherInner::Production { system }) => {
                 system.refresh_processes_specifics(
                     sysinfo::ProcessesToUpdate::All,
+                    true,
                     ProcessRefreshKind::new()
                         .with_memory()
                         .with_cpu()
