@@ -29,10 +29,7 @@ impl Regex {
         }
     }
 
-    pub(crate) fn modify<F>(&mut self, f: F)
-    where
-        F: FnOnce(&mut String),
-    {
+    pub(crate) fn modify(&mut self, f: impl FnOnce(&mut String)) {
         let mut regex: String = self.as_str().to_string();
         f(&mut regex);
         *self = match regex::Regex::new(&regex) {
