@@ -91,6 +91,9 @@ impl tui_app::TuiApp for PorcApp {
                     self.list_state.selected().unwrap_or(0).saturating_add(20),
                 ));
             }
+            (KeyModifiers::NONE, UiMode::EditingPattern, KeyCode::Enter) => {
+                self.ui_mode = UiMode::Normal;
+            }
             (KeyModifiers::NONE, _, KeyCode::Enter) => {
                 if let Some(selected) = self.list_state.selected() {
                     if let Some(process) = self
@@ -441,6 +444,15 @@ mod test {
         simulate_key_press(&mut app, KeyCode::Char('b'))?;
         simulate_key_press(&mut app, KeyCode::Char(')'))?;
         assert_eq!(app.pattern.as_str(), "a(b)");
+        Ok(())
+    }
+
+    #[test]
+    fn exit_pattern_edit_mode() -> R<()> {
+        let mut app = test_app(vec![])?;
+        simulate_key_press(&mut app, KeyCode::Char('/'))?;
+        simulate_key_press(&mut app, KeyCode::Enter)?;
+        assert_eq!(app.ui_mode, UiMode::Normal);
         Ok(())
     }
 
