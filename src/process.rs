@@ -68,9 +68,13 @@ impl Process {
                     Some(file_name) => file_name.to_string_lossy().to_string(),
                     None => exe.to_string_lossy().to_string(),
                 },
-                None => process.name().to_string(),
+                None => process.name().to_string_lossy().to_string(),
             },
-            arguments: process.cmd().to_vec(),
+            arguments: process
+                .cmd()
+                .into_iter()
+                .map(|s| s.to_string_lossy().to_string())
+                .collect(),
             parent: process.parent(),
             cpu: process.cpu_usage(),
             ram: process.memory(),
@@ -196,13 +200,16 @@ impl ProcessWatcher {
 
     pub(crate) fn refresh(&mut self) {
         match self {
-            ProcessWatcher(ProcessWatcherInner::Production { system }) => system
-                .refresh_processes_specifics(
+            ProcessWatcher(ProcessWatcherInner::Production { system }) => {
+                system.refresh_processes_specifics(
+                    sysinfo::ProcessesToUpdate::All,
+                    true,
                     ProcessRefreshKind::new()
                         .with_memory()
                         .with_cpu()
                         .with_cmd(UpdateKind::OnlyIfNotSet),
-                ),
+                );
+            }
             #[cfg(test)]
             ProcessWatcher(ProcessWatcherInner::TestWatcher { .. }) => {}
         }
