@@ -29,6 +29,7 @@ pub(crate) trait TuiApp {
     fn render(&mut self, area: Rect, buf: &mut Buffer);
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum UpdateResult {
     Continue,
     Exit,
