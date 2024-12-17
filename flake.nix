@@ -1,50 +1,46 @@
 {
   inputs = {
-    cargo2nix.url = "github:cargo2nix/cargo2nix/release-0.11.0";
-    flake-utils.follows = "cargo2nix/flake-utils";
-    nixpkgs.follows = "cargo2nix/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+    crane.url = "github:ipetkov/crane";
   };
-  outputs = { nixpkgs, flake-utils, cargo2nix, ... }:
+  outputs = { nixpkgs, flake-utils, crane, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ cargo2nix.overlays.default ];
-        };
-        rustPkgs = pkgs.rustBuilder.makePackageSet {
-          rustVersion = "1.75.0";
-          packageFun = import ./Cargo.nix;
-          extraRustComponents = [ "clippy" ];
-        };
+        lib = nixpkgs.lib;
+        pkgs = import nixpkgs { inherit system; };
+        craneLib = crane.mkLib pkgs;
+        commonArgs =
+          let
+            inner = {
+              src = lib.fileset.toSource {
+                root = ./.;
+                fileset = lib.fileset.unions [
+                  ./Cargo.toml
+                  ./Cargo.lock
+                  ./rust-toolchain
+                  ./src
+                ];
+              };
+              strictDeps = true;
+            };
+          in
+          inner // {
+            cargoArtifacts = craneLib.buildDepsOnly inner;
+          };
       in
       rec {
         packages = {
-          porc = rustPkgs.workspace.porc { };
+          porc = craneLib.buildPackage (commonArgs // {
+            doCheck = false;
+          });
           default = packages.porc;
-          generateCargoNix = pkgs.writeShellApplication
-            {
-              name = "generateCargoNix";
-              runtimeInputs = [ cargo2nix.packages.${system}.default ];
-              text = ''
-                cargo2nix . --overwrite --locked
-              '';
-            };
         };
         checks = {
-          test = pkgs.rustBuilder.runTests rustPkgs.workspace.porc {
-            testCommand = bin:
-              ''
-                export INSTA_WORKSPACE_ROOT=${./.}
-                ${bin}
-              '';
-          };
+          tests = craneLib.cargoTest commonArgs;
         };
-        devShells.default = pkgs.mkShell {
-          buildInputs = [ pkgs.rust-analyzer pkgs.cargo-insta ];
-        };
-        apps.generateCargoNix = {
-          type = "app";
-          program = pkgs.lib.getExe packages.generateCargoNix;
+        devShells.default = craneLib.devShell {
+          packages = [ pkgs.rust-analyzer ];
         };
       }
     );
