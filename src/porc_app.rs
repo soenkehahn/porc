@@ -161,7 +161,7 @@ impl tui_app::TuiApp for PorcApp {
             let mut line = Line::default();
             line.push_span(format!("{} ", x.1.table_data()));
             line.push_span("┃".dark_gray());
-            line.push_span(if &self.list_state.selected() == &Some(i) {
+            line.push_span(if self.list_state.selected() == Some(i) {
                 " ▶ "
             } else {
                 "   "
@@ -245,12 +245,9 @@ impl tui_app::TuiApp for PorcApp {
     }
 }
 
-fn normalize_list_state<T>(list_state: &mut ListState, list: &Vec<T>, rect: &Rect) {
-    match list_state.selected_mut() {
-        Some(ref mut selected) => {
-            *selected = (*selected).min(list.len().saturating_sub(1));
-        }
-        None => {}
+fn normalize_list_state<T>(list_state: &mut ListState, list: &[T], rect: &Rect) {
+    if let Some(ref mut selected) = list_state.selected_mut() {
+        *selected = (*selected).min(list.len().saturating_sub(1));
     }
     *list_state.offset_mut() = list_state
         .offset()
