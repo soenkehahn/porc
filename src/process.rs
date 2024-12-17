@@ -155,6 +155,7 @@ pub(crate) enum SortBy {
     Ram,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for SortBy {
     fn default() -> SortBy {
         SortBy::Pid
