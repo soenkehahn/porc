@@ -38,6 +38,9 @@
         };
         checks = {
           tests = craneLib.cargoTest commonArgs;
+          clippy = craneLib.cargoClippy (commonArgs // {
+            cargoClippyExtraArgs = "-- -Dwarnings";
+          });
         };
         devShells.default = craneLib.devShell {
           packages = [ pkgs.rust-analyzer ];
