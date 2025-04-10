@@ -21,6 +21,7 @@ struct Args {
 }
 
 fn main() -> R<()> {
+    eprintln!("foo: {:?}", 19);
     let args = Args::parse();
     PorcApp::run(PorcApp::new(
         ProcessWatcher::new(System::new()),
