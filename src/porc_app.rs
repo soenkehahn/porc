@@ -55,7 +55,9 @@ impl PorcApp {
         self.forest = self.process_watcher.get_forest();
         self.forest
             .sort_by(&|a, b| Process::compare(a, b, self.sort_column));
-        self.forest.filter(|p| self.pattern.is_match(&p.name));
+        self.forest.filter(|p| {
+            self.pattern.is_match(&p.name) || self.pattern.is_match(&p.id().to_string())
+        });
         if let UiMode::ProcessSelected(selected) = self.ui_mode {
             if !self.forest.iter().any(|node| node.id() == selected) {
                 self.ui_mode = UiMode::Normal;
@@ -420,6 +422,19 @@ mod test {
             Process::fake(4, 0.0, Some(1)),
         ])?;
         set_pattern(&mut app, "two|three")?;
+        app.tick();
+        assert_snapshot!(render_ui(app));
+        Ok(())
+    }
+
+    #[test]
+    fn filtering_by_pid() -> R<()> {
+        let mut app = test_app(vec![
+            Process::fake(1, 0.0, None),
+            Process::fake(2, 0.0, None),
+            Process::fake(3, 0.0, None),
+        ])?;
+        set_pattern(&mut app, "2")?;
         app.tick();
         assert_snapshot!(render_ui(app));
         Ok(())
